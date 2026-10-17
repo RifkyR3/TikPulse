@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- Background Gradient matching TikPulse theme -->
+    <linearGradient id="tikpulse-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9" />
+      <stop offset="55%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#3730a3" />
+    </linearGradient>
+
+    <!-- Subtle inner border gradient -->
+    <linearGradient id="tikpulse-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05" />
+    </linearGradient>
+
+    <!-- Subtle drop shadow -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#tikpulse-bg)" />
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="none" stroke="url(#tikpulse-border)" stroke-width="2.5" />
+
+  <!-- Pulse / Network Telemetry Waveform -->
+  <g filter="url(#glow)">
+    <polyline
+      points="22,64 42,64 52,78 64,24 76,104 86,64 106,64"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="10"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <!-- Peak Activity Indicator Node -->
+    <circle cx="64" cy="24" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="2" />
+  </g>
+</svg>
