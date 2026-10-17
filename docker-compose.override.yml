@@ -1,0 +1,51 @@
+# ==============================================================================
+# TikPulse Docker Compose - Local Development Overrides
+# This file is AUTOMATICALLY loaded by Docker Compose in local development.
+# It enables instant live-reload of PHP and Vue/TypeScript code without rebuilding.
+# In PRODUCTION, do not deploy this file.
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Mount local source code into the PHP-FPM container for live backend updates
+  # ----------------------------------------------------------------------------
+  app:
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+    volumes:
+      - ./:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+      - storage_data:/var/www/html/storage
+
+  # ----------------------------------------------------------------------------
+  # Mount local public and static files into Nginx for instant web updates
+  # ----------------------------------------------------------------------------
+  web:
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./:/var/www/html:ro
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+      - storage_data:/var/www/html/storage:ro
+
+  # ----------------------------------------------------------------------------
+  # Vite Development Server (Hot Module Replacement for Vue 3 & Tailwind v4)
+  # Activated automatically when using: docker compose --profile dev up
+  # ----------------------------------------------------------------------------
+  vite:
+    image: node:22-alpine
+    container_name: tikpulse-vite
+    profiles:
+      - dev
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev:vite"
+    networks:
+      - tikpulse-net

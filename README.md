@@ -72,13 +72,66 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option A: Running with Docker (Recommended)
+
+The easiest way to run TikPulse—including PostgreSQL, Redis, Nginx, and an **auto-provisioned Dummy MikroTik RouterOS (CHR)** for safe testing without touching physical hardware.
+
+#### 1. Development Mode (Live Code Reload + Auto Dummy MikroTik)
+
+```bash
+# Start all services including live source reload and dummy MikroTik
+docker compose --profile dev up -d
+```
+
+* **Live Source Code Updates**: Edits to PHP files (`app/`, `routes/`, `config/`) and Vue components (`resources/js/`) update **instantly without rebuilding**. Vite HMR runs on port `5173`.
+* **Auto-Provisioned Dummy MikroTik**: RouterOS v7 CHR automatically initializes with:
+  * Admin user: `admin` / Password: `admin123`
+  * Hotspot User Profiles: `1Hour-Regular`, `1Day-Unlimited`, `1Month-VIP`
+  * PPP Profiles: `10Mbps-Dedicated`, `20Mbps-Dedicated`
+  * Automatically synced and connected inside TikPulse!
+* **Access Points**:
+  * **TikPulse Web App**: [http://localhost:8000](http://localhost:8000) (Login: `admin@tikpulse.test` / `secret123`)
+  * **WinBox Desktop Access**: Connect to `127.0.0.1:8291` (`admin` / `admin123`)
+  * **WebFig Browser GUI**: [http://localhost:8080](http://localhost:8080)
+  * **MikroTik Socket API**: Port `8728`
+
+To re-run the dummy MikroTik provisioner at any time:
+```bash
+docker compose exec app php artisan mikrotik:setup-dummy
+```
+
+To stop development containers:
+```bash
+docker compose --profile dev down
+```
+
+---
+
+#### 2. Production Mode (Clean, Isolated & No Dummy Router)
+
+In production, run standard Compose **without** the `dev` profile:
+
+```bash
+docker compose -f docker-compose.yml up -d --build
+```
+
+> [!NOTE]
+> In production mode:
+> - The `mikrotik-dummy` service is **never installed, downloaded, or started**.
+> - Local host code folders are **not bind-mounted**; the application runs from an immutable, optimized production container image.
+> - Connect your real production MikroTik routers directly through the TikPulse web dashboard.
+
+---
+
+### Option B: Manual Host Installation (Alternative without Docker)
+
+#### Prerequisites
 - PHP `^8.3` or `^8.5` with `pdo_pgsql`, `openssl`, `sockets`, `curl`, `mbstring`
 - Composer 2.x
 - Node.js 20+ & npm
 - PostgreSQL 14+
 
-### Installation
+#### Installation Steps
 
 1. **Clone the repository**:
    ```bash

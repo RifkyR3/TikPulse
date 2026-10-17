@@ -1,0 +1,143 @@
+services:
+  # ----------------------------------------------------------------------------
+  # TikPulse Application (PHP 8.4-FPM + Laravel 13)
+  # ----------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tikpulse-app
+    restart: unless-stopped
+    environment:
+      APP_NAME: "${APP_NAME:-TikPulse}"
+      APP_ENV: "${APP_ENV:-local}"
+      APP_DEBUG: "${APP_DEBUG:-true}"
+      APP_URL: "${APP_URL:-http://localhost:8000}"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-tikpulse}"
+      DB_USERNAME: "${DB_USERNAME:-postgres}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret123}"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: redis
+      # Auto-provision dummy MikroTik on dev profile
+      MIKROTIK_AUTO_SETUP: "${MIKROTIK_AUTO_SETUP:-true}"
+      MIKROTIK_HOST: mikrotik-dummy
+      MIKROTIK_PORT: 8728
+      MIKROTIK_USER: admin
+      MIKROTIK_PASS: admin123
+    volumes:
+      - storage_data:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tikpulse-net
+
+  # ----------------------------------------------------------------------------
+  # Web Server (Nginx Reverse Proxy & Static Asset Server)
+  # ----------------------------------------------------------------------------
+  web:
+    image: nginx:alpine
+    container_name: tikpulse-web
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - storage_data:/var/www/html/storage:ro
+    depends_on:
+      - app
+    networks:
+      - tikpulse-net
+
+  # ----------------------------------------------------------------------------
+  # Primary Database (PostgreSQL 16)
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: tikpulse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-tikpulse}"
+      POSTGRES_USER: "${DB_USERNAME:-postgres}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-secret123}"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-tikpulse}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tikpulse-net
+
+  # ----------------------------------------------------------------------------
+  # In-Memory Cache & Job Queue (Redis 7)
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:alpine
+    container_name: tikpulse-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tikpulse-net
+
+  # ----------------------------------------------------------------------------
+  # Dummy MikroTik RouterOS CHR (Development & Testing Simulation)
+  # [PROFILES: "dev"] -> ONLY runs when explicitly requested via --profile dev.
+  # Production (docker compose up -d) will NEVER start or install this service!
+  # ----------------------------------------------------------------------------
+  mikrotik-dummy:
+    image: evilfreelancer/docker-routeros:7.16
+    container_name: tikpulse-mikrotik-dummy
+    profiles:
+      - dev
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8728:8728"   # MikroTik Socket API (Used by TikPulse)
+      - "8729:8729"   # MikroTik Socket API SSL
+      - "8291:8291"   # WinBox Desktop App (Access via 127.0.0.1:8291)
+      - "8080:80"     # WebFig Browser GUI (http://localhost:8080)
+      - "8443:443"    # RouterOS HTTPS / REST API
+    volumes:
+      - mikrotik_data:/routeros
+      - ./docker/mikrotik/entrypoint.sh:/routeros/entrypoint.sh:ro
+    networks:
+      - tikpulse-net
+
+# ------------------------------------------------------------------------------
+# Persistent Storage Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  postgres_data:
+  redis_data:
+  storage_data:
+  mikrotik_data:
+
+# ------------------------------------------------------------------------------
+# Internal Bridge Network
+# ------------------------------------------------------------------------------
+networks:
+  tikpulse-net:
+    driver: bridge
