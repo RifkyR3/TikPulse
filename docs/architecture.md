@@ -26,9 +26,15 @@ app/
 │
 └── Http/                # Interface Adapters (Presentation Layer)
     ├── Controllers/     # Thin controllers dispatching requests to Application services
-    ├── Middleware/      # ResolveRouterContext, EnsureSafeModeCompliance
+    ├── Middleware/      # ResolveRouterContext, EnsureSafeModeCompliance, HandleInertiaRequests
     ├── Requests/        # Validated FormRequests
     └── Resources/       # Eloquent API Resources
+
+resources/js/            # Client Presentation Layer (Inertia.js v3 + Svelte 5)
+├── Pages/               # Svelte 5 Page components (auth, dashboard, hotspot, ppp, routers, safe-mode)
+├── components/          # Modular UI components (DataTable, Modals, Forms, Layout, Charts)
+├── stores/              # Svelte 5 reactive stores (.svelte.ts) with localStorage persistence
+└── types/               # Strict TypeScript definitions & API DTO interfaces
 ```
 
 ### Strict Isolation Rules
@@ -52,7 +58,7 @@ Polling high-frequency endpoints (e.g. live CPU load, free memory, active hotspo
 - Eliminates thousands of unnecessary database `UPDATE` queries per hour.
 
 ### C. Client-Side Page Visibility API
-- The frontend integrates the HTML5 Page Visibility API (`usePageVisibility`).
+- The frontend integrates the HTML5 Page Visibility API (`pageVisibility.svelte.ts`).
 - When a user minimizes the browser or navigates to another tab, **all polling intervals and Chart.js streams automatically pause**.
 - When the tab is refocused, polling instantly resumes with a fresh telemetry fetch.
 - Saves up to **85%** of idle client and server background resources.
@@ -99,5 +105,5 @@ All pages follow a standardized visual blueprint:
 2. **Action Bar**: Primary gradient CTA (`from-sky-600 to-indigo-600`) and border-styled refresh buttons.
 3. **Navigation Tabs**: Underline tabs with count badges (`border-b-2 border-sky-500`).
 4. **Metric Cards**: 4-column summary metric cards with soft-tinted icon containers.
-5. **Data Tables**: TanStack DataTable with debounced search, status badges, pagination, and empty states.
+5. **Data Tables**: Reusable `DataTable.svelte` with custom snippet cells, debounced search, status badges, pagination, and empty states.
 6. **Theme**: Fully integrated Dark & Light modes with semantic Tailwind design tokens.

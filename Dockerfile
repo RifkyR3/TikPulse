@@ -1,5 +1,5 @@
 # ==============================================================================
-# Stage 1: Build Frontend Assets (Vue 3 + Vite + Tailwind CSS v4)
+# Stage 1: Build Frontend Assets (Svelte 5 + Inertia.js v3 + Vite + Tailwind CSS v4)
 # ==============================================================================
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app
@@ -9,7 +9,7 @@ RUN npm ci
 
 COPY resources/ ./resources/
 COPY public/ ./public/
-COPY vite.config.ts tsconfig.json ./
+COPY vite.config.ts tsconfig.json svelte.config.js ./
 RUN npm run build
 
 # ==============================================================================

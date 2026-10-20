@@ -8,7 +8,8 @@
 <p align="center">
   <a href="https://laravel.com"><img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13"></a>
   <a href="https://www.php.net"><img src="https://img.shields.io/badge/PHP-8.5+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.5+"></a>
-  <a href="https://vuejs.org"><img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3"></a>
+  <a href="https://svelte.dev"><img src="https://img.shields.io/badge/Svelte-5.x-FF3E00?style=for-the-badge&logo=svelte&logoColor=white" alt="Svelte 5"></a>
+  <a href="https://inertiajs.com"><img src="https://img.shields.io/badge/Inertia.js-v3-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js v3"></a>
   <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
   <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-4.x-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
   <a href="https://mikrotik.com"><img src="https://img.shields.io/badge/MikroTik-RouterOS_v6%20%7C%20v7-29323C?style=for-the-badge" alt="MikroTik RouterOS"></a>
@@ -50,7 +51,7 @@
 - **Multilingual Support**:
   - English (`en`, default) and Bahasa Indonesia (`id`) with user preference persistence.
 - **Enterprise UI/UX Design System**:
-  - Consistent page hierarchy, primary gradient CTAs, TanStack DataTables, and dark/light themes.
+  - Consistent page hierarchy, primary gradient CTAs, responsive data tables, and dark/light themes.
 
 ---
 
@@ -58,13 +59,13 @@
 
 | Layer | Technologies |
 |---|---|
-| **Backend API** | Laravel 13 (Headless REST), PHP 8.5+, Strict Typing |
-| **Frontend SPA** | Vue 3 (Composition API), Vite, TypeScript Strict Mode |
-| **Styling & Icons** | Tailwind CSS (Semantic Tokens), Lucide Icons |
-| **State Management** | Pinia with `localStorage` persistence |
-| **Data Tables** | TanStack Table Vue with debounced filtering & pagination |
-| **Charts & Audio/Visual** | Chart.js (HTML5 Canvas hardware accelerated) |
-| **Notifications** | vue-sonner (Reactive toast alerts) |
+| **Backend Framework** | Laravel 13 (Inertia.js v3 & Headless REST), PHP 8.5+, Strict Typing |
+| **Frontend Architecture** | Svelte 5 (Runes: `$state`, `$derived`, `$props`), Inertia.js v3 (`@inertiajs/svelte`), Vite, TypeScript Strict Mode |
+| **Styling & Icons** | Tailwind CSS v4 (Semantic Tokens), Lucide Svelte |
+| **State Management** | Svelte 5 Reactive Stores (`.svelte.ts`) with `localStorage` persistence |
+| **Data Tables** | Custom Svelte 5 DataTable with snippet cells, debounced filtering & pagination |
+| **Charts & Visuals** | Chart.js (HTML5 Canvas hardware accelerated) |
+| **Notifications** | Svelte Sonner (`svelte-sonner` reactive toast alerts) |
 | **Database** | PostgreSQL 14+ (Idempotent schema & manual DDL policy) |
 | **Authentication** | Laravel Sanctum (Stateful HTTP-Only Cookie with 30-day Remember Me) |
 
@@ -83,7 +84,7 @@ The easiest way to run TikPulse—including PostgreSQL, Redis, Nginx, and an **a
 docker compose --profile dev up -d
 ```
 
-* **Live Source Code Updates**: Edits to PHP files (`app/`, `routes/`, `config/`) and Vue components (`resources/js/`) update **instantly without rebuilding**. Vite HMR runs on port `5173`.
+* **Live Source Code Updates**: Edits to PHP files (`app/`, `routes/`, `config/`) and Svelte components (`resources/js/`) update **instantly without rebuilding**. Vite HMR runs on port `5173`.
 * **Auto-Provisioned Dummy MikroTik**: RouterOS v7 CHR automatically initializes with:
   * Admin user: `admin` / Password: `admin123`
   * Hotspot User Profiles: `1Hour-Regular`, `1Day-Unlimited`, `1Month-VIP`

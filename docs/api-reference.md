@@ -1,6 +1,6 @@
 # TikPulse API Reference (v1) 📡
 
-TikPulse provides a headless REST API adhering to JSON response standards. All requests are handled by Laravel 12 controllers through the `/api/v1` namespace.
+TikPulse provides a headless REST API adhering to JSON response standards. All requests are handled by Laravel 13 controllers through the `/api/v1` namespace.
 
 ---
 

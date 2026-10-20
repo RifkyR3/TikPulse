@@ -4,8 +4,6 @@
         "module": "ESNext",
         "moduleResolution": "bundler",
         "strict": true,
-        "jsx": "preserve",
-        "jsxImportSource": "vue",
         "resolveJsonModule": true,
         "isolatedModules": true,
         "esModuleInterop": true,
@@ -20,6 +18,6 @@
     "include": [
         "resources/js/**/*.ts",
         "resources/js/**/*.d.ts",
-        "resources/js/**/*.vue"
+        "resources/js/**/*.svelte"
     ]
 }

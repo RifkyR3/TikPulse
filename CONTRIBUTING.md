@@ -92,10 +92,11 @@ To maintain clean architecture and enterprise stability, please adhere to these 
 - Any action that performs a potentially destructive operation (hardware reboot, configuration reset, package update, or bulk deletion) **MUST** be protected by `MikrotikSafeModeGuard` and verify the `X-SafeMode-Bypass` header.
 - Every guarded attempt (both authorized and blocked) must be logged to `safe_mode_audit_logs`.
 
-### 3. Frontend Standards (Vue 3 SPA)
-- Use Vue 3 Composition API with `<script setup lang="ts">`.
+### 3. Frontend Standards (Inertia.js + Svelte 5)
+- Use Svelte 5 with runes (`$state`, `$derived`, `$props`, `$effect`, snippets).
+- Client-side navigation powered by Inertia.js v3 (`@inertiajs/svelte`).
 - Strict TypeScript: define interfaces for all DTOs and API responses in `resources/js/types/`.
-- Use Pinia for state management and **TanStack DataTables** for tabular displays.
+- Svelte 5 reactive stores (`.svelte.ts`) with `localStorage` persistence and custom `DataTable.svelte` for tabular displays.
 - Real-time charts must use **Chart.js** with `animation: false` for hardware-accelerated canvas rendering without lag.
 - Follow UI Uniformity Standards: studio pill badge, `h2 font-black` title, primary gradient CTAs (`from-sky-600 to-indigo-600`), and dark/light semantic design tokens.
 

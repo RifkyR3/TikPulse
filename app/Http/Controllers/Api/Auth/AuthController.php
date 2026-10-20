@@ -10,6 +10,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -51,6 +52,10 @@ class AuthController extends Controller
         $remember = $request->boolean('remember');
         $lifetimeDays = $remember ? 30 : 1;
 
+        if ($request->hasSession()) {
+            Auth::login($user, $remember);
+        }
+
         // Create Sanctum PlainTextToken
         $token = $user->createToken('tikpulse_auth_token', ['*'], now()->addDays($lifetimeDays))->plainTextToken;
 
@@ -84,6 +89,12 @@ class AuthController extends Controller
 
         if ($user) {
             $user->currentAccessToken()?->delete();
+        }
+
+        if ($request->hasSession()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
         }
 
         return response()->json([

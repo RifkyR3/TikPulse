@@ -1,30 +1,37 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+/**
+ * Utility to track browser tab visibility.
+ * Prevents useless background polling when tab is inactive, saving client CPU, battery, and server bandwidth.
+ */
 
-const isPageVisible = ref(typeof document !== 'undefined' ? !document.hidden : true);
-
+let isVisible = typeof document !== 'undefined' ? !document.hidden : true;
 const listeners = new Set<(visible: boolean) => void>();
 
 if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
-        isPageVisible.value = !document.hidden;
-        listeners.forEach((callback) => callback(isPageVisible.value));
+        isVisible = !document.hidden;
+        listeners.forEach((callback) => callback(isVisible));
     });
 }
 
-/**
- * Composable to track browser tab visibility.
- * Prevents useless background polling when tab is inactive, saving client CPU, battery, and server bandwidth.
- */
-export function usePageVisibility() {
-    const onVisibilityChange = (callback: (visible: boolean) => void) => {
-        listeners.add(callback);
-        onUnmounted(() => {
-            listeners.delete(callback);
-        });
-    };
+export function isDocumentVisible(): boolean {
+    return typeof document !== 'undefined' ? !document.hidden : true;
+}
 
+export function usePageVisibility() {
     return {
-        isPageVisible,
-        onVisibilityChange,
+        get isPageVisible() {
+            return isDocumentVisible();
+        },
+        isVisible: {
+            get value() {
+                return isDocumentVisible();
+            },
+        },
+        onVisibilityChange(callback: (visible: boolean) => void) {
+            listeners.add(callback);
+            return () => {
+                listeners.delete(callback);
+            };
+        },
     };
 }

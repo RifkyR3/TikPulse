@@ -7,20 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.0] - Unreleased
 
 ### Added
-
-
-### Changed
-
-
-
----
-
-## [1.0.0] - 2026-10-17
-
-### Added
+- **Modern Inertia.js + Svelte 5 Frontend**:
+  - Full client-side architecture migration to Svelte 5 (Runes: `$state`, `$derived`, `$effect`, snippets).
+  - Inertia.js v3 integration (`@inertiajs/svelte`) with server-side page routing and shared props (`HandleInertiaRequests`).
+  - Svelte 5 reactive stores (`routerContext.svelte.ts`, `auth.svelte.ts`, `safeMode.svelte.ts`, `locale.svelte.ts`, `theme.svelte.ts`).
+  - Native Svelte components for all feature modules:
+    - Authentication (`Pages/auth/login.svelte`).
+    - Telemetry & Router Monitoring Dashboard (`Pages/dashboard/Dashboard.svelte`, `InterfaceTrafficChart.svelte`, `ActiveHotspotTable.svelte`).
+    - Multi-Router Fleet Management (`Pages/routers/Index.svelte`, `RouterModal.svelte`).
+    - Hotspot Voucher Studio & Print Engine (`Pages/hotspot/VouchersIndex.svelte`, `GenerateVoucherModal.svelte`, `HotspotProfileModal.svelte`, `VoucherPrintModal.svelte`, `AddHotspotUserModal.svelte`, `QrCode.svelte`).
+    - Dedicated Subscribers & PPP Studio (`Pages/ppp/DedicatedUsers.svelte`, `AddDedicatedUserModal.svelte`, `PppProfileModal.svelte`).
+    - Safe Mode Guardrail & Audit Trail (`Pages/safe-mode/AuditLogs.svelte`, `SafeModeUnlockModal.svelte`, `SafeModeBadge.svelte`).
+  - Reusable generic `DataTable.svelte` supporting client-side filtering, sorting, pagination, and manual server-side pagination with custom snippet cells.
 - **Clean Architecture Backend**:
   - Strict layered domain design (`Domain`, `Application`, `Infrastructure`, `Http/Presentation`).
   - Strict PHP 8.5 type enforcement with `declare(strict_types=1);` and comprehensive type hinting across all methods.
@@ -63,9 +64,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic locale persistence across sessions via `users.preferred_locale` and `localStorage`.
 - **Enterprise UI/UX Design System**:
   - Uniform page blueprint with studio category pill badges, primary gradient action CTAs (`from-sky-600 to-indigo-600`), and underline tabs with count badges.
-  - Responsive TanStack DataTables with status badge styling, pagination, debounced filtering, and empty states.
+  - Responsive `DataTable.svelte` with status badge styling, pagination, debounced filtering, and empty states.
   - Seamless dark and light mode themes powered by semantic Tailwind CSS tokens.
 - **Database Architecture**:
   - Strict manual DDL policy preventing runtime DDL operations.
   - Idempotent PostgreSQL schema script (`database/sql/schema.sql`) and Laravel migrations.
   - Stateful session authentication via Laravel Sanctum with 30-day "Remember Me" persistence.
+- **AI Developer Tooling & Context**:
+  - Configured Laravel Boost guidelines, MCP server, and skills for IDE/AI pair programming.
+
+### Changed
+- Migrated Vite build configuration from `@vitejs/plugin-vue` to `@sveltejs/vite-plugin-svelte` with code-splitting.
+- Completely removed legacy Vue 3 dependencies, Pinia, Vue Router, and obsolete `.vue` views and components.
+- Maintained strict UI/UX uniformity with semantic Tailwind CSS tokens and bilingual English/Indonesian localization.
+
+### Fixed
+- Resolved Svelte 5 a11y label warnings (`a11y_label_has_associated_control`) across `AddDedicatedUserModal`, `PppProfileModal`, `HotspotProfileModal`, `AddHotspotUserModal`, and `GenerateVoucherModal` by establishing explicit `for` and `id` control associations.
+- Moved `Column` interface export in `DataTable.svelte` into a `<script module>` block to conform to Svelte 5 module export requirements.
+- Added `locale` getter to `LocaleStore` for type-safe template expressions.
+- Added optional `title` prop to `AdminLayout.svelte`.
+- Fixed local state reference warning in `DedicatedUsers.svelte`.
+

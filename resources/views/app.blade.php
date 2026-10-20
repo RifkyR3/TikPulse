@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{{ config('app.name', 'TikPulse') }} - Enterprise MikroTik & Hotspot Management</title>
+        <title inertia>{{ config('app.name', 'TikPulse') }} - Enterprise MikroTik & Hotspot Management</title>
         <meta name="description" content="Enterprise-Grade Multi-Router MikroTik & Hotspot Voucher Management System">
 
         <!-- Preload & theme detection (Prevent FOUC) -->
@@ -23,9 +23,10 @@
         <link rel="alternate icon" href="/favicon.ico" sizes="any">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-        @vite(['resources/css/app.css', 'resources/js/main.ts'])
+        @vite(['resources/css/app.css', 'resources/js/app.ts'])
+        @inertiaHead
     </head>
     <body class="h-full bg-background text-foreground font-sans antialiased selection:bg-primary selection:text-primary-foreground">
-        <div id="app" class="h-full"></div>
+        @inertia
     </body>
 </html>

@@ -25,12 +25,12 @@
 ## 4. Resilience & Performance
 - Circuit Breaker trips after 3 consecutive failures (fast-fail 503 `CircuitBreakerTrippedException`), pausing telemetry/polling. Reconnect action resets the counter.
 - High-frequency telemetry/active sessions: transient cache (2-3s). Router status DB updates throttled to status change or every 30s.
-- Client: Halt polling when browser tab is hidden (`usePageVisibility`). Debounce all table search/filter inputs.
+- Client: Halt polling when browser tab is hidden (`pageVisibility.svelte.ts`). Debounce all table search/filter inputs.
 
 ## 5. UI/UX & Localization Standards
-- Bilingual: English (`en`, default) and Bahasa Indonesia (`id`). Persist in `users.preferred_locale` + `localStorage('tikpulse_locale')`. Sync via `useLocaleStore`.
-- Strict UI Uniformity: Mirror layout, visual hierarchy, and patterns from `VouchersIndexView.vue` and `DedicatedUsersView.vue`.
-  - Use TanStack `DataTable`, semantic Tailwind tokens (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`), and uniform primary gradient for CTAs (`bg-gradient-to-r from-sky-600 to-indigo-600`).
+- Bilingual: English (`en`, default) and Bahasa Indonesia (`id`). Persist in `users.preferred_locale` + `localStorage('tikpulse_locale')`. Sync via `localeStore` (`resources/js/stores/locale.svelte.ts`).
+- Strict UI Uniformity: Mirror layout, visual hierarchy, and patterns from `VouchersIndex.svelte` and `DedicatedUsers.svelte`.
+  - Use `DataTable.svelte`, semantic Tailwind tokens (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`), and uniform primary gradient for CTAs (`bg-gradient-to-r from-sky-600 to-indigo-600`).
 
 ## 6. Pre-Finalization Checklist & Versioning
 - Lint with PHP 8.5: `php85 vendor/bin/pint --format agent`.
