@@ -1,8 +1,11 @@
 .git
 .github
 .agents
+.ai
 .claude
 .vscode
+AGENTS.md
+CLAUDE.md
 node_modules
 vendor
 storage/*.key
