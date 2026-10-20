@@ -4,6 +4,7 @@
     import { safeModeStore } from '@/stores/safeMode.svelte';
     import { localeStore } from '@/stores/locale.svelte';
     import { Server, ChevronDown, Check, Plus, RefreshCw } from '@lucide/svelte';
+    import { Separator } from '@/components/ui/separator';
 
     let { onAddRouter }: { onAddRouter?: () => void } = $props();
 
@@ -35,25 +36,25 @@
     <button
         type="button"
         onclick={() => (isOpen = !isOpen)}
-        class="flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-border bg-card/80 hover:bg-muted text-foreground text-xs font-medium transition-all shadow-xs cursor-pointer relative z-40"
+        class="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-background hover:bg-muted text-foreground text-xs font-medium transition-all shadow-xs cursor-pointer relative z-40 select-none"
     >
-        <div class="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center shrink-0">
-            <Server class="w-3.5 h-3.5" />
+        <div class="size-5 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Server class="size-3.5" />
         </div>
-        <div class="flex flex-col text-left leading-none max-w-[120px] sm:max-w-[180px] truncate">
+        <div class="flex flex-col text-left leading-tight max-w-[120px] sm:max-w-[180px] truncate">
             <span class="font-bold truncate text-foreground">
                 {routerContextStore.activeRouter?.name || localeStore.t('nav.selectRouter')}
             </span>
-            <span class="text-[10px] text-muted-foreground truncate font-mono mt-0.5">
+            <span class="text-[10px] text-muted-foreground truncate font-mono">
                 {routerContextStore.activeRouter?.host || localeStore.t('nav.noRouter')}
             </span>
         </div>
-        <ChevronDown class="w-3.5 h-3.5 text-muted-foreground ml-1 transition-transform {isOpen ? 'rotate-180' : ''}" />
+        <ChevronDown class="size-3.5 text-muted-foreground ml-0.5 transition-transform {isOpen ? 'rotate-180' : ''}" />
     </button>
 
     {#if isOpen}
-        <div class="absolute top-full left-0 mt-2 w-72 rounded-2xl border border-border bg-card p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-            <div class="px-3 py-2 border-b border-border mb-1 flex items-center justify-between">
+        <div class="absolute top-full left-0 mt-2 w-72 rounded-xl border border-border bg-card p-1.5 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div class="px-2.5 py-1.5 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">MikroTik Routers</span>
                 <button
                     type="button"
@@ -61,21 +62,23 @@
                     class="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title="Refresh router list"
                 >
-                    <RefreshCw class="w-3 h-3 {routerContextStore.isLoading ? 'animate-spin' : ''}" />
+                    <RefreshCw class="size-3 {routerContextStore.isLoading ? 'animate-spin' : ''}" />
                 </button>
             </div>
 
+            <Separator class="my-1" />
+
             <!-- List of routers -->
-            <div class="max-h-60 overflow-y-auto space-y-1">
+            <div class="max-h-60 overflow-y-auto space-y-0.5">
                 {#each routerContextStore.routers as r (r.id)}
                     <button
                         type="button"
                         onclick={() => handleSelect(r.id)}
-                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer {r.id === routerContextStore.activeRouterId ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold' : 'hover:bg-muted text-foreground'}"
+                        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-colors cursor-pointer {r.id === routerContextStore.activeRouterId ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold' : 'hover:bg-muted text-foreground'}"
                     >
-                        <div class="flex items-center space-x-2.5">
+                        <div class="flex items-center gap-2 truncate">
                             <span
-                                class="w-2 h-2 rounded-full {r.status === 'online' ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : r.status === 'error' ? 'bg-rose-500' : 'bg-slate-400'}"
+                                class="size-2 rounded-full shrink-0 {r.status === 'online' ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : r.status === 'error' ? 'bg-rose-500' : 'bg-slate-400'}"
                             ></span>
                             <div class="truncate">
                                 <div class="truncate font-medium">{r.name}</div>
@@ -83,7 +86,7 @@
                             </div>
                         </div>
                         {#if r.id === routerContextStore.activeRouterId}
-                            <Check class="w-3.5 h-3.5 shrink-0 text-sky-500" />
+                            <Check class="size-3.5 shrink-0 text-sky-500" />
                         {/if}
                     </button>
                 {:else}
@@ -93,20 +96,20 @@
                 {/each}
             </div>
 
+            <Separator class="my-1" />
+
             <!-- Add new router button -->
-            <div class="pt-2 mt-1 border-t border-border">
-                <button
-                    type="button"
-                    onclick={() => {
-                        onAddRouter?.();
-                        isOpen = false;
-                    }}
-                    class="w-full flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl border border-dashed border-border hover:border-sky-500/50 hover:bg-sky-500/5 text-xs font-semibold text-muted-foreground hover:text-sky-500 transition-all cursor-pointer"
-                >
-                    <Plus class="w-3.5 h-3.5" />
-                    <span>Register New Router</span>
-                </button>
-            </div>
+            <button
+                type="button"
+                onclick={() => {
+                    onAddRouter?.();
+                    isOpen = false;
+                }}
+                class="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-dashed border-border hover:border-sky-500/50 hover:bg-sky-500/5 text-xs font-semibold text-muted-foreground hover:text-sky-500 transition-all cursor-pointer"
+            >
+                <Plus class="size-3.5" />
+                <span>Register New Router</span>
+            </button>
         </div>
     {/if}
 </div>

@@ -4,8 +4,12 @@
     import { localeStore } from '@/stores/locale.svelte';
     import ThemeToggle from '@/components/layout/ThemeToggle.svelte';
     import LanguageSwitcher from '@/components/layout/LanguageSwitcher.svelte';
+    import * as Card from '@/components/ui/card';
+    import { Button } from '@/components/ui/button';
+    import { Input } from '@/components/ui/input';
+    import { Label } from '@/components/ui/label';
     import { router } from '@inertiajs/svelte';
-    import { Activity, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ShieldCheck, ArrowRight } from '@lucide/svelte';
+    import { Activity, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, ShieldCheck } from '@lucide/svelte';
 
     let email = $state('');
     let password = $state('');
@@ -51,116 +55,131 @@
     }
 </script>
 
-<div class="relative min-h-screen flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-card/40 to-background">
-    <!-- Top Navigation Bar -->
-    <header class="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center space-x-2 sm:space-x-3">
-        <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full border border-border/60 bg-card text-xs font-medium text-muted-foreground">
-            <ShieldCheck class="w-3.5 h-3.5 text-emerald-500" />
+<svelte:head>
+    <title>Login - TikPulse Admin</title>
+</svelte:head>
+
+<div class="relative bg-background flex min-h-screen items-center justify-center p-4">
+    <!-- Top Bar Controls -->
+    <header class="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2">
+        <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-card text-xs font-medium text-muted-foreground">
+            <ShieldCheck class="size-3.5 text-emerald-500" />
             <span>Enterprise v1.0</span>
         </div>
         <LanguageSwitcher />
         <ThemeToggle />
     </header>
 
-    <!-- Main Card Container -->
-    <div class="w-full max-w-md">
-        <!-- Brand & Header -->
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-primary text-primary-foreground shadow-lg shadow-sky-500/20 mb-4 ring-4 ring-primary/10">
-                <Activity class="w-7 h-7" />
+    <!-- Centered Card Container -->
+    <Card.Root class="w-full max-w-md shadow-lg border-border">
+        <Card.Header class="space-y-2 text-center pb-2">
+            <div class="flex justify-center">
+                <div class="inline-flex items-center justify-center size-14 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-primary text-white shadow-lg shadow-sky-500/20 mb-2 ring-4 ring-primary/10">
+                    <Activity class="size-7" />
+                </div>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+            <Card.Title class="text-2xl font-bold tracking-tight">
                 Tik<span class="text-sky-500">Pulse</span>
-            </h1>
-            <p class="mt-2 text-sm text-muted-foreground">
+            </Card.Title>
+            <Card.Description>
                 {localeStore.t('auth.tagline')}
-            </p>
-        </div>
+            </Card.Description>
+        </Card.Header>
 
-        <!-- Card -->
-        <div class="rounded-2xl border border-border/80 bg-card p-6 sm:p-8 shadow-xl shadow-black/5 dark:shadow-black/20">
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold text-foreground">{localeStore.t('auth.welcomeBack')}</h2>
-                <p class="text-xs text-muted-foreground">{localeStore.t('auth.welcomeSubtitle')}</p>
-            </div>
+        <Card.Content class="space-y-4">
+            <!-- Demo Access Callout Box -->
+            {#if !isProduction}
+                <div class="bg-muted rounded-lg p-3 text-xs leading-relaxed border border-border/60">
+                    <div class="flex items-center justify-between font-semibold text-foreground mb-1">
+                        <span>Demo Administrative Access</span>
+                        <button
+                            type="button"
+                            onclick={fillDemo}
+                            class="text-sky-500 hover:text-sky-400 underline font-semibold cursor-pointer"
+                        >
+                            {localeStore.t('auth.fillSample')}
+                        </button>
+                    </div>
+                    <p class="text-muted-foreground">
+                        Email: <span class="font-mono font-semibold text-foreground">admin@tikpulse.test</span> · Password: <span class="font-mono font-semibold text-foreground">secret123</span>
+                    </p>
+                </div>
+            {/if}
 
-            <!-- Error Alert Banner -->
+            <!-- Error Banner -->
             {#if clientError || authStore.error}
-                <div class="mb-6 flex items-start space-x-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3.5 text-xs text-destructive">
-                    <AlertCircle class="h-4 w-4 shrink-0 mt-0.5" />
+                <div class="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                    <AlertCircle class="size-4 shrink-0 mt-0.5" />
                     <div class="flex-1 font-medium leading-relaxed">
                         {clientError || authStore.error}
                     </div>
                 </div>
             {/if}
 
-            <!-- Login Form -->
+            <!-- Form -->
             <form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4">
                 <!-- Email Field -->
-                <div>
-                    <label for="login_email" class="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
-                        {localeStore.t('auth.emailAddress')}
-                    </label>
+                <div class="space-y-1.5">
+                    <Label for="login_email">{localeStore.t('auth.emailAddress')}</Label>
                     <div class="relative">
                         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                            <Mail class="h-4 w-4" />
+                            <Mail class="size-4" />
                         </div>
-                        <input
+                        <Input
                             id="login_email"
                             bind:value={email}
                             type="email"
                             autocomplete="email"
                             required
                             placeholder={isProduction ? 'name@company.com' : 'admin@tikpulse.test'}
-                            class="block w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
+                            class="pl-9"
                         />
                     </div>
                 </div>
 
                 <!-- Password Field -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label for="login_password" class="block text-xs font-semibold text-foreground uppercase tracking-wider">
-                            {localeStore.t('auth.password')}
-                        </label>
-                        <span class="text-[11px] text-muted-foreground cursor-default">{localeStore.t('auth.protectedSanctum')}</span>
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <Label for="login_password">{localeStore.t('auth.password')}</Label>
+                        <span class="text-[10px] text-muted-foreground font-mono">{localeStore.t('auth.protectedSanctum')}</span>
                     </div>
                     <div class="relative">
                         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                            <Lock class="h-4 w-4" />
+                            <Lock class="size-4" />
                         </div>
-                        <input
+                        <Input
                             id="login_password"
                             bind:value={password}
                             type={showPassword ? 'text' : 'password'}
                             autocomplete="current-password"
                             required
                             placeholder="••••••••"
-                            class="block w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
+                            class="pl-9 pr-9"
                         />
                         <button
                             type="button"
                             onclick={() => (showPassword = !showPassword)}
                             class="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                            tabindex="-1"
+                            tabindex={-1}
+                            aria-label="Toggle password visibility"
                         >
                             {#if showPassword}
-                                <EyeOff class="h-4 w-4" />
+                                <EyeOff class="size-4" />
                             {:else}
-                                <Eye class="h-4 w-4" />
+                                <Eye class="size-4" />
                             {/if}
                         </button>
                     </div>
                 </div>
 
-                <!-- Remember Me Option -->
+                <!-- Remember Me Checkbox -->
                 <div class="flex items-center justify-between text-xs py-0.5">
-                    <label class="flex items-center space-x-2 text-foreground cursor-pointer select-none">
+                    <label class="flex items-center gap-2 text-foreground cursor-pointer select-none">
                         <input
                             id="login_remember_me"
                             bind:checked={remember}
                             type="checkbox"
-                            class="w-4 h-4 rounded border-border text-sky-500 focus:ring-sky-500 cursor-pointer"
+                            class="size-4 rounded border-border text-sky-500 focus:ring-sky-500 cursor-pointer"
                         />
                         <span class="font-medium text-muted-foreground hover:text-foreground transition-colors">
                             {localeStore.t('auth.rememberMe')}
@@ -169,37 +188,25 @@
                 </div>
 
                 <!-- Submit Button -->
-                <button
+                <Button
                     type="submit"
                     disabled={authStore.isLoading}
-                    class="w-full flex items-center justify-center space-x-2 rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 py-2.5 px-4 text-sm font-semibold text-white shadow-md shadow-sky-600/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-2 cursor-pointer"
+                    class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-md shadow-sky-600/20 py-2.5"
                 >
                     {#if authStore.isLoading}
-                        <Loader2 class="w-4 h-4 animate-spin" />
+                        <Loader2 class="size-4 animate-spin" />
                     {:else}
                         <span>{localeStore.t('auth.signIn')}</span>
-                        <ArrowRight class="w-4 h-4" />
+                        <ArrowRight class="size-4" />
                     {/if}
-                </button>
+                </Button>
             </form>
+        </Card.Content>
 
-            <!-- Demo helper (hidden in production) -->
-            {#if !isProduction}
-                <div class="mt-6 pt-4 border-t border-border/60 text-center">
-                    <button
-                        type="button"
-                        onclick={fillDemo}
-                        class="inline-flex items-center text-xs text-muted-foreground hover:text-sky-500 transition-colors font-medium cursor-pointer"
-                    >
-                        {localeStore.t('auth.fillSample')}
-                    </button>
-                </div>
-            {/if}
-        </div>
-
-        <!-- Footer info -->
-        <p class="mt-6 text-center text-xs text-muted-foreground">
-            {localeStore.t('auth.footerInfo')}
-        </p>
-    </div>
+        <Card.Footer class="justify-center border-t border-border pt-4">
+            <p class="text-center text-xs text-muted-foreground">
+                {localeStore.t('auth.footerInfo')}
+            </p>
+        </Card.Footer>
+    </Card.Root>
 </div>

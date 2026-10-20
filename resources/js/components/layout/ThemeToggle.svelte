@@ -1,18 +1,21 @@
 <script lang="ts">
     import { themeStore } from '@/stores/theme.svelte';
+    import { Button } from '@/components/ui/button';
     import { Sun, Moon } from '@lucide/svelte';
 </script>
 
-<button
-    type="button"
+<Button
     onclick={() => themeStore.toggleTheme()}
-    class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-    title="Toggle Theme (Dark / Light)"
+    variant="ghost"
+    size="icon-sm"
+    class="size-8 text-foreground"
+    title={themeStore.isDark ? "Switch to light theme" : "Switch to dark theme"}
     aria-label="Toggle Theme"
 >
     {#if themeStore.isDark}
-        <Sun class="h-4 w-4 transition-transform duration-200 rotate-0 scale-100 text-amber-400" />
+        <Sun class="size-4 scale-100 rotate-0 transition-all text-amber-400" />
     {:else}
-        <Moon class="h-4 w-4 transition-transform duration-200 rotate-0 scale-100 text-slate-700" />
+        <Moon class="size-4 scale-100 rotate-0 transition-all text-slate-700 dark:text-slate-300" />
     {/if}
-</button>
+    <span class="sr-only">Toggle theme</span>
+</Button>

@@ -84,4 +84,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `locale` getter to `LocaleStore` for type-safe template expressions.
 - Added optional `title` prop to `AdminLayout.svelte`.
 - Fixed local state reference warning in `DedicatedUsers.svelte`.
+- Converted application shell and design layout to [SvelteForge Admin](https://github.com/ColorlibHQ/svelteforge-admin) template architecture:
+  - Built pure Svelte 5 UI primitives in `resources/js/components/ui/` (`sidebar`, `card`, `button`, `badge`, `breadcrumb`, `separator`, `input`, `label`, `avatar`).
+  - Implemented SvelteForge `Sidebar.Provider`, `Sidebar.Root`, `Sidebar.Inset`, and responsive drawer with keyboard shortcuts.
+  - Modernized `AppHeader.svelte` with dynamic breadcrumb trail, sidebar trigger, router telemetry pill, and header action controls.
+  - Overhauled `AppSidebar.svelte` with SvelteForge brand logo badge, categorized group navigation, live router status monitor, and user profile footer.
+  - Redesigned `Pages/auth/login.svelte` to match SvelteForge Admin Card form design with demo access callout while preserving the signature TikPulse gradient squircle logo.
+  - Refactored `Pages/dashboard/Dashboard.svelte` telemetry grid to use SvelteForge Card and Badge design system.
+  - Preserved the original TikPulse brand logo (`Activity` icon in gradient squircle `from-sky-500 via-indigo-500 to-primary`) across both `AppSidebar.svelte` and `login.svelte`.
 
