@@ -40,18 +40,24 @@ Please include in your report:
 
 TikPulse is designed with several defensive security layers:
 
-1. **Hardware Safe Mode Guardrails**:
+1. **Role-Based Access Control (RBAC) & Principle of Least Privilege**:
+   - Fine-grained module capabilities (`read`, `write`, `update`, `delete`) enforced on every endpoint by `AuthorizeModuleAccess` middleware (`module.access`).
+   - Router access scoping: Groups are strictly restricted to authorized router IDs when `all_routers` is false, preventing lateral access across devices.
+   - Account Protection Guardrails: Hard safeguards prevent self-deletion, self-deactivation, or deletion/demotion of the last Super Administrator.
+   - Role Simulation Sandboxing: Super Administrator simulation mode executes within a read-only role evaluation context that strictly prevents privilege escalation.
+
+2. **Hardware Safe Mode Guardrails**:
    - Destructive operations (`/system/reboot`, `/system/reset-configuration`, mass deletions) are blocked by default.
    - Operations require a two-step authentication unlock sequence yielding a cryptographically random bypass token with a 15-minute TTL.
    - All guarded attempts are logged into an append-only audit trail (`safe_mode_audit_logs`).
 
-2. **Encrypted Credentials**:
+3. **Encrypted Credentials**:
    - RouterOS access credentials are encrypted at rest using AES-256 via Laravel Encrypter (`Crypt::encryptString`).
    - Plaintext credentials are never logged or exposed in client responses.
 
-3. **Isolated Router Contexts**:
+4. **Isolated Router Contexts**:
    - Multi-tenant router requests require authenticated session context and the `X-Router-ID` header.
    - Router contexts are strictly validated against the user's fleet permissions.
 
-4. **Circuit Breaker Fast-Fail**:
+5. **Circuit Breaker Fast-Fail**:
    - Out-of-band network attacks or broken socket attempts fail fast after 3 retries, preventing server socket starvation or DoS amplification.

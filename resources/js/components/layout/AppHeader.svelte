@@ -32,6 +32,7 @@
             vouchers: localeStore.t('nav.vouchers'),
             'dedicated-users': localeStore.t('nav.dedicatedUsers'),
             'audit-logs': localeStore.t('nav.auditLogs'),
+            users: localeStore.t('nav.users'),
         };
 
         return segments.map((seg, i) => {

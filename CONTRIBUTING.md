@@ -8,7 +8,7 @@ Please read this document to understand our contribution workflow, development s
 
 ## 📜 Code of Conduct
 
-All contributors and maintainers are expected to abide by our [Code of Conduct](file:///CODE_OF_CONDUCT.md). Please report any unacceptable behavior to `rifky.r3@gmail.com`.
+All contributors and maintainers are expected to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please report any unacceptable behavior to `rifky.r3@gmail.com`.
 
 ---
 
@@ -88,19 +88,26 @@ To maintain clean architecture and enterprise stability, please adhere to these 
 - Maintain layered isolation: `Domain` -> `Application` -> `Infrastructure` -> `Http/Presentation`.
 - **NEVER** instantiate or invoke MikroTik socket connections directly inside Controllers. All communication must pass through service contracts in `Application` or `Infrastructure`.
 
-### 2. Safe Mode Guardrails
+### 2. Role-Based Access Control (RBAC) & Router Scoping
+- All protected endpoints must apply `AuthorizeModuleAccess` middleware (`module.access:<module>,<ability>`).
+- Router-specific routes must use `router.context:true` to ensure the authenticated user's access group permits access to the target router.
+- Respect account safety guardrails: prevent self-deletion, self-deactivation, or deletion of the last remaining Super Administrator.
+
+### 3. Safe Mode Guardrails
 - Any action that performs a potentially destructive operation (hardware reboot, configuration reset, package update, or bulk deletion) **MUST** be protected by `MikrotikSafeModeGuard` and verify the `X-SafeMode-Bypass` header.
 - Every guarded attempt (both authorized and blocked) must be logged to `safe_mode_audit_logs`.
 
-### 3. Frontend Standards (Inertia.js + Svelte 5)
+### 4. Frontend Standards (Inertia.js + Svelte 5)
 - Use Svelte 5 with runes (`$state`, `$derived`, `$props`, `$effect`, snippets).
 - Client-side navigation powered by Inertia.js v3 (`@inertiajs/svelte`).
 - Strict TypeScript: define interfaces for all DTOs and API responses in `resources/js/types/`.
+- Use pure SvelteForge UI primitives in `resources/js/components/ui/` (`sidebar`, `card`, `button`, `badge`, `breadcrumb`, `avatar`, `input`, `separator`).
+- Dynamically guard actions and navigation links using `authStore.can(module, ability)`.
 - Svelte 5 reactive stores (`.svelte.ts`) with `localStorage` persistence and custom `DataTable.svelte` for tabular displays.
 - Real-time charts must use **Chart.js** with `animation: false` for hardware-accelerated canvas rendering without lag.
 - Follow UI Uniformity Standards: studio pill badge, `h2 font-black` title, primary gradient CTAs (`from-sky-600 to-indigo-600`), and dark/light semantic design tokens.
 
-### 4. Code Formatting & Static Analysis
+### 5. Code Formatting & Static Analysis
 Run these checks before submitting any pull request:
 
 ```powershell
@@ -118,7 +125,7 @@ php85 artisan test
 
 ## 📝 Mandatory Changelog Updates
 
-Any pull request that adds a feature, fixes a bug, or refactors existing behavior **MUST** update [CHANGELOG.md](file:///CHANGELOG.md) under the `## [Unreleased]` section.
+Any pull request that adds a feature, fixes a bug, or refactors existing behavior **MUST** update [CHANGELOG.md](CHANGELOG.md) under the `## [Unreleased]` section.
 
 Categorize your changes using:
 - `Added` for new features.
@@ -137,5 +144,6 @@ Before opening a pull request, verify that:
 - [ ] TypeScript compiles cleanly (`npm run types:check`).
 - [ ] Code has been formatted using Laravel Pint (`php85 vendor/bin/pint --format agent`).
 - [ ] `CHANGELOG.md` has been updated with a clear summary of your changes.
+- [ ] RBAC permissions (`module.access`) and router scoping (`router.context`) are applied.
 - [ ] Safe Mode compliance is preserved for destructive endpoints.
-- [ ] New UI features adhere to the UI/UX Uniformity Standards.
+- [ ] New UI features adhere to the UI/UX Uniformity Standards and SvelteForge UI primitives.

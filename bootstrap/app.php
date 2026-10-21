@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthorizeModuleAccess;
 use App\Http\Middleware\EnsureSafeModeCompliance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveRouterContext;
@@ -17,11 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->statefulApi();
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->alias([
             'router.context' => ResolveRouterContext::class,
             'safe.mode' => EnsureSafeModeCompliance::class,
+            'module.access' => AuthorizeModuleAccess::class,
         ]);
 
         $middleware->web(append: [

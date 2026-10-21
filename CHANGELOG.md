@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - Unreleased
 
 ### Added
+- **Enterprise User Management**:
+  - Full user account management with search, group filter, status filter, and pagination (`Pages/user/UsersIndex.svelte` and `components/user/UserModal.svelte`).
+  - Account guardrails preventing self-deletion, self-deactivation, and demotion/deletion of the last remaining Super Administrator.
+- **Access Group & Role Management**:
+  - Custom access groups with member count, description, and permission assignment (`components/user/GroupModal.svelte`).
+  - Safeguards preventing deletion of the Super Administrator group or any group with active assigned users.
+- **Granular Module Permissions (ACL)**:
+  - Granular module capabilities (`read`, `write`, `update`, `delete`) across all core modules: `dashboard`, `routers`, `hotspot_vouchers`, `ppp_subscribers`, `safe_mode_logs`, `users`, and `groups`.
+  - Backend `AuthorizeModuleAccess` middleware (`module.access`) enforcing permissions on all API endpoints with 403 Forbidden fast-fail.
+  - Client-side `$derived` permission helpers in `authStore.can()` dynamically filtering navigation menu items and disabling protected actions.
+- **MikroTik Router Scoping per Group**:
+  - Groups can be configured with either unrestricted access (`all_routers = true`) or scoped to specific MikroTik router IDs via the `group_router` pivot table.
+  - `RouterController` and `ResolveRouterContext` middleware automatically restrict router queries and block unauthorized router access with 403 Forbidden.
+- **Superadmin Role Switching & Simulation**:
+  - Superadmin users can switch their active group context to test and preview permissions as any operator role via `POST /api/v1/auth/switch-role` and `SwitchRoleModal.svelte`.
+  - Top alert `SimulationBanner.svelte` with live role badge and one-click "Exit Simulation" reversion back to Super Administrator.
+- **User Settings & Appearance Preferences**:
+  - Cross-session persistence for language (`en`, `id`), theme mode (`light`, `dark`, `system`), 6 theme accent colors (`sky`, `indigo`, `emerald`, `violet`, `amber`, `rose`), auto-refresh interval, and table display options via `users.settings` JSON column.
+  - Interactive `PreferencesModal.svelte` accessible from user avatar dropdown.
 - **Modern Inertia.js + Svelte 5 Frontend**:
   - Full client-side architecture migration to Svelte 5 (Runes: `$state`, `$derived`, `$effect`, snippets).
   - Inertia.js v3 integration (`@inertiajs/svelte`) with server-side page routing and shared props (`HandleInertiaRequests`).
@@ -79,6 +98,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Maintained strict UI/UX uniformity with semantic Tailwind CSS tokens and bilingual English/Indonesian localization.
 
 ### Fixed
+- Fixed SQLSTATE[42703] PostgreSQL undefined column errors (`ip_address`, `is_active`, `board_name`) in `HandleInertiaRequests` middleware by resolving `Router` entities via `RouterResource::collection()->resolve()` and removing non-existent column projections and active status filters.
+- Added virtual `board_name` accessor to `Router` Eloquent model to mirror `RouterResource` behavior.
+- Fixed state persistence and disappearing actions on browser hard reload (`Ctrl + F5`):
+  - Enriched `HandleInertiaRequests` middleware with `UserResource` to pass complete user context (including `is_superadmin`, `can_switch_role`, `group`, `effective_permissions`, `allowed_router_ids`, and `settings`) and added token cookie authentication fallback.
+  - Enabled stateful API sessions via `$middleware->statefulApi()` in `bootstrap/app.php`.
+  - Added synchronous `localStorage` persistence and hydration for `authStore.user` (`tikpulse_user`) in `auth.svelte.ts`.
+  - Implemented `initFromPageProps` in `authStore` and wired real-time `$effect` and setup hydration in `app.ts` and `AdminLayout.svelte`.
+  - Added automatic background `fetchMe()` execution on client boot whenever an auth token exists.
 - Resolved Svelte 5 a11y label warnings (`a11y_label_has_associated_control`) across `AddDedicatedUserModal`, `PppProfileModal`, `HotspotProfileModal`, `AddHotspotUserModal`, and `GenerateVoucherModal` by establishing explicit `for` and `id` control associations.
 - Moved `Column` interface export in `DataTable.svelte` into a `<script module>` block to conform to Svelte 5 module export requirements.
 - Added `locale` getter to `LocaleStore` for type-safe template expressions.

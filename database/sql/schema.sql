@@ -18,9 +18,12 @@ CREATE TABLE IF NOT EXISTS users (
     email_verified_at TIMESTAMP WITH TIME ZONE NULL,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(30) NOT NULL DEFAULT 'operator', -- 'superadmin', 'admin', 'operator'
+    group_id BIGINT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     avatar_url VARCHAR(500) NULL,
     preferred_locale VARCHAR(10) NOT NULL DEFAULT 'en',
+    settings JSONB NOT NULL DEFAULT '{"theme": "system", "accent_color": "sky", "refresh_interval": 15, "table_compact_mode": false}',
+    simulated_group_id BIGINT NULL,
     remember_token VARCHAR(100) NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -28,6 +31,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_group_id ON users(group_id);
 
 -- ------------------------------------------------------------------------------
 -- 2. Table: routers (MikroTik Router Profiles & Connection Configurations)
@@ -254,4 +258,75 @@ CREATE INDEX IF NOT EXISTS idx_dedicated_users_router_id ON dedicated_users(rout
 CREATE INDEX IF NOT EXISTS idx_dedicated_users_customer_name ON dedicated_users(customer_name);
 CREATE INDEX IF NOT EXISTS idx_dedicated_users_remote_address ON dedicated_users(remote_address);
 CREATE INDEX IF NOT EXISTS idx_dedicated_users_disabled ON dedicated_users(disabled);
+
+-- ------------------------------------------------------------------------------
+-- 10. Table: groups (Enterprise Role & Scoped Access Groups)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS groups (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT NULL,
+    is_superadmin BOOLEAN NOT NULL DEFAULT FALSE,
+    all_routers BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_groups_slug ON groups(slug);
+
+-- ------------------------------------------------------------------------------
+-- 11. Table: modules (Registered Application Modules & Capabilities)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS modules (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    key VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT NULL,
+    available_actions JSONB NOT NULL DEFAULT '["read", "write", "update", "delete"]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_modules_key ON modules(key);
+
+-- ------------------------------------------------------------------------------
+-- 12. Table: group_module_permissions (Granular Module ACL Per Group)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS group_module_permissions (
+    id BIGSERIAL PRIMARY KEY,
+    group_id BIGINT NOT NULL,
+    module_key VARCHAR(50) NOT NULL,
+    can_read BOOLEAN NOT NULL DEFAULT FALSE,
+    can_write BOOLEAN NOT NULL DEFAULT FALSE,
+    can_update BOOLEAN NOT NULL DEFAULT FALSE,
+    can_delete BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_gmp_group FOREIGN KEY (group_id) 
+        REFERENCES groups(id) ON DELETE CASCADE,
+    CONSTRAINT uq_group_module_key UNIQUE (group_id, module_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_gmp_group_id ON group_module_permissions(group_id);
+
+-- ------------------------------------------------------------------------------
+-- 13. Table: group_router (MikroTik Router Access Scoping Pivot Table)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS group_router (
+    id BIGSERIAL PRIMARY KEY,
+    group_id BIGINT NOT NULL,
+    router_id BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_gr_group FOREIGN KEY (group_id) 
+        REFERENCES groups(id) ON DELETE CASCADE,
+    CONSTRAINT fk_gr_router FOREIGN KEY (router_id) 
+        REFERENCES routers(id) ON DELETE CASCADE,
+    CONSTRAINT uq_group_router UNIQUE (group_id, router_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_router_group ON group_router(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_router_router ON group_router(router_id);
+
 

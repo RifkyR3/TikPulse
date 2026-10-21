@@ -1,7 +1,11 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
+    import { page } from '@inertiajs/svelte';
+    import { authStore } from '@/stores/auth.svelte';
     import * as Sidebar from '@/components/ui/sidebar';
     import AppSidebar from '@/components/layout/AppSidebar.svelte';
     import AppHeader from '@/components/layout/AppHeader.svelte';
+    import SimulationBanner from '@/components/layout/SimulationBanner.svelte';
     import SafeModeUnlockModal from '@/components/safe-mode/SafeModeUnlockModal.svelte';
     import RouterModal from '@/components/routers/RouterModal.svelte';
     import { Toaster } from 'svelte-sonner';
@@ -10,6 +14,19 @@
 
     let isUnlockModalOpen = $state(false);
     let isRouterModalOpen = $state(false);
+
+    $effect(() => {
+        const sharedUser = (page.props as any)?.auth?.user;
+        if (sharedUser && (!authStore.user || authStore.user.id !== sharedUser.id || authStore.user.simulated_group_id !== sharedUser.simulated_group_id)) {
+            authStore.initFromPageProps(sharedUser);
+        }
+    });
+
+    onMount(() => {
+        if (authStore.token && !authStore.user) {
+            authStore.fetchMe();
+        }
+    });
 </script>
 
 <Toaster richColors position="top-right" />
@@ -20,6 +37,9 @@
 
     <!-- SvelteForge Inset Content Area -->
     <Sidebar.Inset>
+        <!-- Simulation Warning Banner (Active when superadmin tests role) -->
+        <SimulationBanner />
+
         <!-- Top Sticky Header -->
         <AppHeader
             onOpenUnlockModal={() => (isUnlockModalOpen = true)}

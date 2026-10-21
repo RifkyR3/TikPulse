@@ -1,5 +1,6 @@
 import { createInertiaApp } from '@inertiajs/svelte';
 import { mount } from 'svelte';
+import { authStore } from '@/stores/auth.svelte';
 import '../css/app.css';
 
 createInertiaApp({
@@ -19,6 +20,10 @@ createInertiaApp({
         return module.default ? module : { default: module };
     },
     setup({ el, App, props }) {
+        const sharedUser = (props.initialPage?.props as any)?.auth?.user;
+        if (sharedUser) {
+            authStore.initFromPageProps(sharedUser);
+        }
         if (el) {
             mount(App, { target: el, props });
         }

@@ -15,6 +15,7 @@
         ShieldAlert,
         LogOut,
         ChevronDown,
+        Users,
     } from '@lucide/svelte';
 
     const sidebar = Sidebar.useSidebar();
@@ -45,6 +46,7 @@
         url: string;
         icon: typeof LayoutDashboard;
         badge?: string;
+        module?: string;
     };
 
     type NavGroup = {
@@ -56,29 +58,33 @@
         {
             label: 'Overview',
             items: [
-                { title: localeStore.t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard },
+                { title: localeStore.t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
             ],
         },
         {
             label: 'Network',
             items: [
-                { title: localeStore.t('nav.routers'), url: '/routers', icon: Server },
+                { title: localeStore.t('nav.routers'), url: '/routers', icon: Server, module: 'routers' },
             ],
         },
         {
             label: 'Services',
             items: [
-                { title: localeStore.t('nav.vouchers'), url: '/vouchers', icon: Ticket },
-                { title: localeStore.t('nav.dedicatedUsers'), url: '/dedicated-users', icon: Radio },
+                { title: localeStore.t('nav.vouchers'), url: '/vouchers', icon: Ticket, module: 'hotspot_vouchers' },
+                { title: localeStore.t('nav.dedicatedUsers'), url: '/dedicated-users', icon: Radio, module: 'ppp_subscribers' },
             ],
         },
         {
-            label: 'System & Security',
+            label: 'Administration',
             items: [
-                { title: localeStore.t('nav.auditLogs'), url: '/audit-logs', icon: ShieldAlert },
+                { title: localeStore.t('nav.users'), url: '/users', icon: Users, module: 'users' },
+                { title: localeStore.t('nav.auditLogs'), url: '/audit-logs', icon: ShieldAlert, module: 'safe_mode_logs' },
             ],
         },
-    ]);
+    ].map(group => ({
+        ...group,
+        items: group.items.filter(item => !item.module || authStore.can(item.module, 'read') || (item.module === 'users' && authStore.can('groups', 'read'))),
+    })).filter(group => group.items.length > 0));
 </script>
 
 <Sidebar.Root collapsible="icon">

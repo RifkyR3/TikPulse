@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\RouterResource;
+use App\Http\Resources\UserResource;
 use App\Models\Router;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -38,31 +43,45 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        /** @var User|null $user */
         $user = $request->user();
 
-        // Get list of active routers
-        $routers = $user
-            ? Router::query()
-                ->select(['id', 'name', 'ip_address', 'status', 'is_active', 'is_safe_mode_enabled', 'board_name', 'ros_version'])
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get()
-            : [];
+        // If not authenticated via session, check if Sanctum token cookie is present
+        if (! $user && $request->hasCookie('tikpulse_token')) {
+            $tokenString = $request->cookie('tikpulse_token');
+            if (is_string($tokenString)) {
+                $accessToken = PersonalAccessToken::findToken($tokenString);
+                if ($accessToken && $accessToken->tokenable instanceof User) {
+                    $user = $accessToken->tokenable;
+                    if ($request->hasSession()) {
+                        Auth::login($user);
+                    }
+                }
+            }
+        }
+
+        if ($user) {
+            $user->loadMissing(['group', 'group.permissions', 'group.routers']);
+        }
+
+        // Get list of routers (scoped to group if not all_routers)
+        $routersQuery = Router::query()
+            ->orderBy('name');
+
+        if ($user && ! $user->canAccessAllRouters()) {
+            $allowedIds = $user->getAllowedRouterIds() ?? [];
+            $routersQuery->whereIn('id', $allowedIds);
+        }
+
+        $routers = $user ? RouterResource::collection($routersQuery->get())->resolve() : [];
 
         // Active router ID from session or header
-        $activeRouterId = (int) ($request->session()->get('active_router_id') ?? ($routers[0]->id ?? 0));
+        $activeRouterId = (int) ($request->session()->get('active_router_id') ?? ($routers[0]['id'] ?? 0));
 
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user ? [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                    'preferred_locale' => $user->preferred_locale ?? 'en',
-                    'avatar_url' => $user->avatar_url,
-                ] : null,
+                'user' => $user ? (new UserResource($user))->resolve() : null,
             ],
             'routers' => $routers,
             'activeRouterId' => $activeRouterId,

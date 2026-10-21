@@ -24,6 +24,25 @@
 
 ## 🌟 Highlights
 
+- **Enterprise Role-Based Access Control (RBAC)**:
+  - Granular module permissions (`read`, `write`, `update`, `delete`) scoped across all platform modules (`dashboard`, `routers`, `hotspot_vouchers`, `ppp_subscribers`, `safe_mode_logs`, `users`, and `groups`).
+  - Backend `AuthorizeModuleAccess` middleware (`module.access`) enforcing permissions with immediate HTTP 403 fast-fail.
+  - Client-side `$derived` permission helpers in `authStore.can()` dynamically filtering sidebar navigation and disabling protected actions.
+- **MikroTik Router Scoping per Group**:
+  - Assign groups unrestricted fleet access (`all_routers = true`) or limit operators strictly to authorized routers via `group_router` bindings.
+  - Enforced at both database query level and `ResolveRouterContext` middleware.
+- **Superadmin Role Switching & Simulation**:
+  - Superadmin accounts can simulate any group context in real time to preview exact operator permissions.
+  - Sticky simulation banner (`SimulationBanner.svelte`) with one-click return to Super Administrator.
+- **Account Safety Guardrails**:
+  - Built-in defenses preventing self-deletion, self-deactivation, and demotion/deletion of the last remaining Super Administrator.
+  - Protection against deleting the Super Administrator group or groups with active members.
+- **Personalized Appearance & Preferences**:
+  - Per-user settings persistence in PostgreSQL JSONB (`users.settings`): Theme Mode (`light`, `dark`, `system`), 6 Theme Accent Colors (`sky`, `indigo`, `emerald`, `violet`, `amber`, `rose`), language (`en`, `id`), and configurable telemetry refresh rates.
+  - Interactive modal dialog (`PreferencesModal.svelte`) accessible directly from the user avatar dropdown.
+- **SvelteForge Admin UI/UX Architecture**:
+  - Modern, responsive application layout powered by pure Svelte 5 UI primitives (`sidebar`, `card`, `button`, `badge`, `breadcrumb`, `separator`, `input`, `avatar`).
+  - Collapsible sidebar drawer with keyboard shortcut (`Ctrl+B`), live breadcrumbs, and real-time status badges.
 - **Multi-Router Fleet Management**: Centrally manage multiple MikroTik routers with seamless per-request context switching via `X-Router-ID`.
 - **Dual Network Protocols**: High-speed native API socket (Port 8728 / SSL 8729) and RouterOS v7 REST API (HTTPS Port 443).
 - **Safe Mode Hardware Guardrails (Default: Active)**:
@@ -60,14 +79,16 @@
 | Layer | Technologies |
 |---|---|
 | **Backend Framework** | Laravel 13 (Inertia.js v3 & Headless REST), PHP 8.5+, Strict Typing |
-| **Frontend Architecture** | Svelte 5 (Runes: `$state`, `$derived`, `$props`), Inertia.js v3 (`@inertiajs/svelte`), Vite, TypeScript Strict Mode |
-| **Styling & Icons** | Tailwind CSS v4 (Semantic Tokens), Lucide Svelte |
-| **State Management** | Svelte 5 Reactive Stores (`.svelte.ts`) with `localStorage` persistence |
+| **Frontend Architecture** | Svelte 5 (Runes: `$state`, `$derived`, `$props`, `$effect`), Inertia.js v3 (`@inertiajs/svelte`), Vite, TypeScript Strict Mode |
+| **UI Components** | Pure Svelte 5 UI Primitives (SvelteForge Admin: sidebar drawer, card, button, badge, breadcrumb, avatar, modal dialogs) |
+| **Styling & Icons** | Tailwind CSS v4 (Semantic Tokens & 6 Accent Colors), Lucide Svelte |
+| **State Management** | Svelte 5 Reactive Stores (`.svelte.ts`) with `localStorage` persistence and token hydration |
+| **Access Control (RBAC)**| Granular Module ACL (`read`, `write`, `update`, `delete`) & Router Scoping with `AuthorizeModuleAccess` middleware |
 | **Data Tables** | Custom Svelte 5 DataTable with snippet cells, debounced filtering & pagination |
 | **Charts & Visuals** | Chart.js (HTML5 Canvas hardware accelerated) |
 | **Notifications** | Svelte Sonner (`svelte-sonner` reactive toast alerts) |
 | **Database** | PostgreSQL 14+ (Idempotent schema & manual DDL policy) |
-| **Authentication** | Laravel Sanctum (Stateful HTTP-Only Cookie with 30-day Remember Me) |
+| **Authentication** | Laravel Sanctum (Stateful HTTP-Only Cookie & Bearer Token with 30-day Remember Me) |
 
 ---
 
@@ -177,6 +198,14 @@ docker compose -f docker-compose.yml up -d --build
 - **Email**: `admin@tikpulse.test`
 - **Password**: `secret123`
 - **Role**: `superadmin`
+
+### Primary Application Routes
+- 📊 `/dashboard` — Real-time telemetry, live WAN throughput, and active hotspot overview.
+- 🌐 `/routers` — Multi-router fleet management, protocol drivers, and connection testing.
+- 🎫 `/vouchers` — Hotspot voucher studio, batch generation, profile sync, and thermal print engine.
+- 🔌 `/dedicated-users` — Dedicated subscriber secrets (PPPoE/L2TP), bandwidth profiles, and active session kicker.
+- 👥 `/users` — Enterprise RBAC, user account management, custom access groups, and module ACL.
+- 🛡️ `/audit-logs` — Tamper-resistant Safe Mode guardrail audit trail and security logs.
 
 ---
 

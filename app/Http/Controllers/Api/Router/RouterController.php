@@ -12,6 +12,7 @@ use App\Http\Requests\Router\UpdateRouterRequest;
 use App\Http\Resources\RouterResource;
 use App\Infrastructure\Network\Mikrotik\Services\MikrotikConnectionService;
 use App\Models\Router;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -26,9 +27,18 @@ class RouterController extends Controller
     /**
      * List all registered MikroTik routers.
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $routers = Router::orderBy('name')->get();
+        $query = Router::orderBy('name');
+
+        /** @var User|null $user */
+        $user = $request->user();
+        if ($user && ! $user->canAccessAllRouters()) {
+            $allowedIds = $user->getAllowedRouterIds() ?? [];
+            $query->whereIn('id', $allowedIds);
+        }
+
+        $routers = $query->get();
 
         return RouterResource::collection($routers);
     }

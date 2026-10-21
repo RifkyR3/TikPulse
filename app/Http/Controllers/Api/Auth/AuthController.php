@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Group;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class AuthController extends Controller
         $password = (string) $request->input('password');
 
         /** @var User|null $user */
-        $user = User::where('email', $email)->first();
+        $user = User::with(['group', 'group.permissions', 'group.routers'])->where('email', $email)->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
             $request->hitRateLimiter();
@@ -110,6 +111,7 @@ class AuthController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+        $user->load(['group', 'group.permissions', 'group.routers']);
 
         return response()->json([
             'status' => 'success',
@@ -131,6 +133,11 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
         $user->preferred_locale = $validated['locale'];
+
+        $settings = $user->settings ?? [];
+        $settings['preferred_locale'] = $validated['locale'];
+        $user->settings = $settings;
+
         $user->save();
 
         return response()->json([
@@ -138,6 +145,125 @@ class AuthController extends Controller
             'message' => 'Language preference updated.',
             'data' => [
                 'preferred_locale' => $user->preferred_locale,
+                'settings' => $user->settings,
+            ],
+        ]);
+    }
+
+    /**
+     * Update user appearance, colors, and application preferences.
+     */
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'theme' => ['nullable', 'string', 'in:light,dark,system'],
+            'accent_color' => ['nullable', 'string', 'in:sky,indigo,emerald,violet,amber,rose'],
+            'preferred_locale' => ['nullable', 'string', 'in:en,id'],
+            'refresh_interval' => ['nullable', 'integer', 'in:0,5,10,15,30,60'],
+            'table_compact_mode' => ['nullable', 'boolean'],
+            'settings' => ['nullable', 'array'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+        $currentSettings = $user->settings ?? [
+            'theme' => 'system',
+            'accent_color' => 'sky',
+            'refresh_interval' => 15,
+            'table_compact_mode' => false,
+        ];
+
+        if (isset($validated['settings']) && is_array($validated['settings'])) {
+            $currentSettings = array_merge($currentSettings, $validated['settings']);
+        }
+
+        foreach (['theme', 'accent_color', 'refresh_interval', 'table_compact_mode'] as $key) {
+            if (isset($validated[$key])) {
+                $currentSettings[$key] = $validated[$key];
+            }
+        }
+
+        if (isset($validated['preferred_locale'])) {
+            $user->preferred_locale = $validated['preferred_locale'];
+            $currentSettings['preferred_locale'] = $validated['preferred_locale'];
+        }
+
+        $user->settings = $currentSettings;
+        $user->save();
+        $user->load(['group', 'group.permissions', 'group.routers']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Settings saved successfully.',
+            'data' => [
+                'user' => new UserResource($user),
+            ],
+        ]);
+    }
+
+    /**
+     * Superadmin switch role / group context simulation.
+     */
+    public function switchRole(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->isSuperAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'SUPERADMIN_ONLY',
+                'message' => 'Only Super Administrators can switch roles.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'group_id' => ['nullable', 'integer', 'exists:groups,id'],
+        ]);
+
+        $groupId = $validated['group_id'] ?? null;
+        $user->simulated_group_id = $groupId ? (int) $groupId : null;
+        $user->save();
+        $user->load(['group', 'group.permissions', 'group.routers']);
+
+        $message = $user->simulated_group_id
+            ? 'Switched role simulation to group.'
+            : 'Reset role to default Super Administrator.';
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $message,
+            'data' => [
+                'user' => new UserResource($user),
+            ],
+        ]);
+    }
+
+    /**
+     * Reset role simulation back to Superadmin.
+     */
+    public function resetRole(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->isSuperAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'SUPERADMIN_ONLY',
+                'message' => 'Only Super Administrators can switch roles.',
+            ], 403);
+        }
+
+        $user->simulated_group_id = null;
+        $user->save();
+        $user->load(['group', 'group.permissions', 'group.routers']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Simulation cleared. Reverted to Super Administrator.',
+            'data' => [
+                'user' => new UserResource($user),
             ],
         ]);
     }

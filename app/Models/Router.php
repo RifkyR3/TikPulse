@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
@@ -68,6 +69,7 @@ class Router extends Model
     protected $appends = [
         'ip_address',
         'port',
+        'board_name',
         'free_memory',
         'total_memory',
         'memory_usage_percent',
@@ -81,6 +83,11 @@ class Router extends Model
     public function getPortAttribute(): int
     {
         return $this->api_port;
+    }
+
+    public function getBoardNameAttribute(): ?string
+    {
+        return $this->board_model;
     }
 
     public function getFreeMemoryAttribute(): ?int
@@ -175,5 +182,15 @@ class Router extends Model
     public function auditLogs(): HasMany
     {
         return $this->hasMany(SafeModeAuditLog::class);
+    }
+
+    /**
+     * Groups assigned to this router.
+     *
+     * @return BelongsToMany<Group, $this>
+     */
+    public function groups(): BelongsToMany
+    {
+        return $this->belongsToMany(Group::class, 'group_router');
     }
 }

@@ -24,16 +24,27 @@ app/
 │   ├── Mikrotik/        # SocketRouterOsDriver (Port 8728/8729), RestRouterOsDriver (RouterOS v7)
 │   └── Repositories/    # Eloquent persistence implementations
 │
+├── Models/              # Eloquent Models (User, Group, Module, GroupModulePermission, Router, etc.)
+│
 └── Http/                # Interface Adapters (Presentation Layer)
     ├── Controllers/     # Thin controllers dispatching requests to Application services
-    ├── Middleware/      # ResolveRouterContext, EnsureSafeModeCompliance, HandleInertiaRequests
+    │   ├── Api/Auth/    # AuthController (Login, Logout, Me, Settings, Switch-Role)
+    │   ├── Api/User/    # UserController, GroupController, ModuleController
+    │   ├── Api/Router/  # RouterController (Fleet, Telemetry, Reboot, Connectivity)
+    │   ├── Api/Hotspot/ # VoucherController, HotspotProfileController, ActiveUserController
+    │   ├── Api/Ppp/     # DedicatedUserController, PppProfileController, PppActiveController
+    │   └── Api/SafeMode/# SafeModeController (Unlock, Lock, Toggle, AuditLogs)
+    ├── Middleware/      # AuthorizeModuleAccess, ResolveRouterContext, EnsureSafeModeCompliance, HandleInertiaRequests
     ├── Requests/        # Validated FormRequests
-    └── Resources/       # Eloquent API Resources
+    └── Resources/       # Eloquent API Resources (UserResource, GroupResource, ModuleResource, etc.)
 
 resources/js/            # Client Presentation Layer (Inertia.js v3 + Svelte 5)
-├── Pages/               # Svelte 5 Page components (auth, dashboard, hotspot, ppp, routers, safe-mode)
+├── Pages/               # Svelte 5 Page components (auth, dashboard, hotspot, ppp, routers, safe-mode, user)
 ├── components/          # Modular UI components (DataTable, Modals, Forms, Layout, Charts)
+│   ├── layout/          # AdminLayout, AppHeader, AppSidebar, SimulationBanner, PreferencesModal
+│   └── ui/              # SvelteForge UI Primitives (sidebar, card, button, badge, breadcrumb, avatar, input)
 ├── stores/              # Svelte 5 reactive stores (.svelte.ts) with localStorage persistence
+├── locales/             # Bilingual dictionaries (en.ts, id.ts)
 └── types/               # Strict TypeScript definitions & API DTO interfaces
 ```
 
@@ -44,7 +55,40 @@ resources/js/            # Client Presentation Layer (Inertia.js v3 + Svelte 5)
 
 ---
 
-## ⚡ 2. Resource Efficiency & Zero-Waste Architecture
+## 👥 2. Enterprise RBAC & Router Scoping Architecture
+
+TikPulse incorporates a granular Role-Based Access Control (RBAC) engine designed for ISP operators, multi-tenant managers, and branch administrators.
+
+### A. Granular Module Permissions
+Permissions are structured across seven core functional modules:
+1. `dashboard` — Real-time telemetry, WAN traffic visualizer, active hotspot stats.
+2. `routers` — Hardware profiles, connection credentials, reboot commands.
+3. `hotspot_vouchers` — Hotspot profiles, voucher generation, print engine, active users.
+4. `ppp_subscribers` — PPP bandwidth profiles, subscriber secrets, kick disconnection.
+5. `safe_mode_logs` — Hardware guardrail audit logs.
+6. `users` — Administrator and operator accounts.
+7. `groups` — Access roles and permission matrix definitions.
+
+Each module supports four discrete CRUD actions: `read`, `write`, `update`, and `delete`. The `AuthorizeModuleAccess` middleware (`module.access:<module>,<ability>`) validates each HTTP request and returns **HTTP 403 Forbidden** if the user's group lacks the requested ability.
+
+### B. Group-Based Router Scoping
+- Groups can be flagged as `all_routers = true` (granting access to all routers in the fleet) or scoped to specific router IDs via the `group_router` pivot table.
+- When an operator makes a request with `X-Router-ID`, the `ResolveRouterContext` middleware validates whether the requested router ID exists within the user's `allowed_router_ids`. If unauthorized, the request is immediately rejected with HTTP 403.
+
+### C. Double-Layer Destructive Guardrail
+Destructive commands (such as rebooting hardware or deleting voucher batches) must pass **both** authorization layers:
+1. **Layer 1 (RBAC)**: User's group must possess the necessary capability (`update` for reboot; `delete` for bulk purge).
+2. **Layer 2 (Safe Mode)**: Target router's `EnsureSafeModeCompliance` middleware checks for an active 15-minute bypass token (`X-SafeMode-Bypass`).
+
+### D. Superadmin Role Simulation
+Super Administrators can simulate any operator group via `POST /api/v1/auth/switch-role`:
+- The backend sets `simulated_group_id` on the authenticated user record.
+- Eloquent dynamic accessors (`$user->effective_permissions` and `$user->allowed_router_ids`) resolve permissions from the simulated group rather than superadmin privileges.
+- A persistent `SimulationBanner.svelte` appears at the top of the frontend SPA, allowing one-click reversion back to Super Administrator via `POST /api/v1/auth/reset-role`.
+
+---
+
+## ⚡ 3. Resource Efficiency & Zero-Waste Architecture
 
 Managing fleets of hardware routers requires strict controls over server and network utilization. TikPulse implements multiple defense layers:
 
@@ -69,7 +113,7 @@ Polling high-frequency endpoints (e.g. live CPU load, free memory, active hotspo
 
 ---
 
-## 🔌 3. Offline Circuit Breaker Architecture
+## 🔌 4. Offline Circuit Breaker Architecture
 
 To prevent server thread starvation from connection timeout loops when a router goes offline:
 
@@ -89,21 +133,20 @@ stateDiagram-v2
 
 ---
 
-## 🌐 4. Multi-Router Context Architecture
+## 🎨 5. SvelteForge Admin UI/UX Architecture
 
-Every MikroTik request is scoped by router context:
-- The frontend includes the `X-Router-ID` header in API requests.
-- The `ResolveRouterContext` middleware retrieves the router model and ensures the user has authorization to access it.
-- Credentials stored in `routers.password_encrypted` are decrypted on-the-fly inside `MikrotikConnectionService` using Laravel's AES-256 encrypter.
+The frontend is built on [SvelteForge Admin](https://github.com/ColorlibHQ/svelteforge-admin) architecture:
 
----
-
-## 🎨 5. UI/UX Uniformity Standards
-
-All pages follow a standardized visual blueprint:
-1. **Page Header**: Studio Category Pill Badge (`text-sky-600 bg-sky-500/10`) + Active Router indicator + `h2 font-black` title.
-2. **Action Bar**: Primary gradient CTA (`from-sky-600 to-indigo-600`) and border-styled refresh buttons.
-3. **Navigation Tabs**: Underline tabs with count badges (`border-b-2 border-sky-500`).
-4. **Metric Cards**: 4-column summary metric cards with soft-tinted icon containers.
-5. **Data Tables**: Reusable `DataTable.svelte` with custom snippet cells, debounced search, status badges, pagination, and empty states.
-6. **Theme**: Fully integrated Dark & Light modes with semantic Tailwind design tokens.
+1. **Svelte 5 Runes**: Built entirely with Svelte 5 modern reactivity (`$state`, `$derived`, `$props`, `$effect`, and snippets).
+2. **Pure UI Primitives**: Modular components in `resources/js/components/ui/` (`Sidebar`, `Card`, `Button`, `Badge`, `Breadcrumb`, `Separator`, `Input`, `Label`, `Avatar`).
+3. **Responsive App Layout**:
+   - `AppSidebar.svelte`: Categorized navigation grouped by domain, live router status pill, and collapsible drawer with keyboard shortcut (`Ctrl+B`).
+   - `AppHeader.svelte`: Interactive breadcrumbs, sidebar trigger, and user profile dropdown.
+   - `SimulationBanner.svelte`: Top bar displayed when superadmin is previewing an operator role.
+4. **Resilient State Hydration**:
+   - `HandleInertiaRequests` middleware shares authenticated user DTOs (`UserResource`) and router fleets (`RouterResource`).
+   - `authStore` synchronous hydration with `localStorage` fallback prevents layout shift and UI flickering on hard browser reload (`Ctrl + F5`).
+5. **Theme & Customization**:
+   - Dark, Light, and System theme modes supported via CSS class toggling on `document.documentElement`.
+   - 6 user-selectable theme accent colors (`sky`, `indigo`, `emerald`, `violet`, `amber`, `rose`).
+   - Preference persistence synchronized to `users.settings` in PostgreSQL via `PreferencesModal.svelte`.

@@ -38,3 +38,7 @@ Route::get('/dedicated-users', function () {
 Route::get('/audit-logs', function () {
     return Inertia::render('safe-mode/AuditLogs');
 })->name('audit-logs');
+
+Route::get('/users', function () {
+    return Inertia::render('user/UsersIndex');
+})->name('users');

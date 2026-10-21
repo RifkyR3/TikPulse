@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\Router;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,6 +38,16 @@ class ResolveRouterContext
         }
 
         if ($router) {
+            /** @var User|null $user */
+            $user = $request->user();
+            if ($user && ! $user->canAccessRouter((int) $router->id)) {
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 'ROUTER_ACCESS_DENIED',
+                    'message' => 'You do not have permission to access this MikroTik router.',
+                ], 403);
+            }
+
             $request->attributes->set('active_router', $router);
         }
 
