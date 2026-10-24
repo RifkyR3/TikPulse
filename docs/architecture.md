@@ -103,13 +103,13 @@ Polling high-frequency endpoints (e.g. live CPU load, free memory, active hotspo
 
 ### C. Client-Side Page Visibility API
 - The frontend integrates the HTML5 Page Visibility API (`pageVisibility.svelte.ts`).
-- When a user minimizes the browser or navigates to another tab, **all polling intervals and Chart.js streams automatically pause**.
+- When a user minimizes the browser or navigates to another tab, **all polling intervals and ApexCharts streams automatically pause**.
 - When the tab is refocused, polling instantly resumes with a fresh telemetry fetch.
 - Saves up to **85%** of idle client and server background resources.
 
-### D. Hardware-Accelerated Canvas Charting
-- Real-time WAN traffic visualizers use **Chart.js** over HTML5 `<canvas>` with `animation: false`.
-- Eliminates CPU lag and memory leaks typically caused by continuous SVG polygon string calculations.
+### D. Zero-Animation Streaming Visualizer
+- Real-time WAN traffic visualizers use **ApexCharts** with zero-animation streaming mode (`animations: { enabled: false }`).
+- Dynamically synchronizes with the system dark/light theme and delivers crisp SVG rendering without CPU lag.
 
 ---
 

@@ -61,7 +61,7 @@
   - Live active session monitoring with one-click user termination ("Kick").
   - Bi-directional idempotent synchronization with MikroTik RouterOS.
 - **Hardware-Accelerated Real-Time Telemetry**:
-  - Real-time WAN bandwidth visualizer powered by **Chart.js HTML5 Canvas** running in zero-animation mode.
+  - Real-time WAN bandwidth visualizer powered by **ApexCharts** running in zero-animation mode.
   - Configurable polling rate (`Pause`, `5s`, `10s`, `15s`, `30s`, `60s`) with cross-session persistence.
 - **Resource Zero-Waste Architecture**:
   - Short-lived transient caching (2-3s) on high-frequency routes.
@@ -85,7 +85,7 @@
 | **State Management** | Svelte 5 Reactive Stores (`.svelte.ts`) with `localStorage` persistence and token hydration |
 | **Access Control (RBAC)**| Granular Module ACL (`read`, `write`, `update`, `delete`) & Router Scoping with `AuthorizeModuleAccess` middleware |
 | **Data Tables** | Custom Svelte 5 DataTable with snippet cells, debounced filtering & pagination |
-| **Charts & Visuals** | Chart.js (HTML5 Canvas hardware accelerated) |
+| **Charts & Visuals** | ApexCharts (Zero-animation real-time SVG streaming & theme synchronization) |
 | **Notifications** | Svelte Sonner (`svelte-sonner` reactive toast alerts) |
 | **Database** | PostgreSQL 14+ (Idempotent schema & manual DDL policy) |
 | **Authentication** | Laravel Sanctum (Stateful HTTP-Only Cookie & Bearer Token with 30-day Remember Me) |

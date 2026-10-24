@@ -1,8 +1,10 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
-    import Chart from 'chart.js/auto';
+    import ApexCharts from 'apexcharts';
+    import 'apexcharts/dist/apexcharts.css';
     import { routerContextStore } from '@/stores/routerContext.svelte';
     import { localeStore } from '@/stores/locale.svelte';
+    import { themeStore } from '@/stores/theme.svelte';
     import { usePageVisibility } from '@/utils/pageVisibility';
     import apiClient from '@/services/api';
     import type { ApiResponse } from '@/types/api';
@@ -26,8 +28,8 @@
     let txBps = $state(0);
     let isStreamPaused = $state(false);
 
-    let canvasRef: HTMLCanvasElement | null = $state(null);
-    let chartInstance: Chart | null = null;
+    let chartContainerRef: HTMLDivElement | null = $state(null);
+    let chartInstance: ApexCharts | null = null;
     let pollTimer: any = null;
 
     const maxDataPoints = 16;
@@ -111,86 +113,130 @@
     }
 
     function initChart() {
-        if (!canvasRef) return;
-        const ctx = canvasRef.getContext('2d');
-        if (!ctx) return;
+        if (!chartContainerRef) return;
 
-        const rxGradient = ctx.createLinearGradient(0, 0, 0, 140);
-        rxGradient.addColorStop(0, 'rgba(14, 165, 233, 0.28)');
-        rxGradient.addColorStop(1, 'rgba(14, 165, 233, 0.00)');
+        if (chartInstance) {
+            chartInstance.destroy();
+            chartInstance = null;
+        }
 
-        const txGradient = ctx.createLinearGradient(0, 0, 0, 140);
-        txGradient.addColorStop(0, 'rgba(99, 102, 241, 0.22)');
-        txGradient.addColorStop(1, 'rgba(99, 102, 241, 0.00)');
+        const isDark = themeStore.isDark;
 
-        chartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Rx (Download)',
-                        data: rxData,
-                        borderColor: '#0284c7',
-                        borderWidth: 2,
-                        backgroundColor: rxGradient,
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
+        const options: ApexCharts.ApexOptions = {
+            chart: {
+                type: 'area',
+                height: 160,
+                parentHeightOffset: 0,
+                animations: {
+                    enabled: false,
+                    dynamicAnimation: {
+                        enabled: false,
                     },
-                    {
-                        label: 'Tx (Upload)',
-                        data: txData,
-                        borderColor: '#6366f1',
-                        borderWidth: 2,
-                        backgroundColor: txGradient,
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                    },
-                ],
+                },
+                toolbar: {
+                    show: false,
+                },
+                zoom: {
+                    enabled: false,
+                },
+                background: 'transparent',
+                fontFamily: 'inherit',
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                resizeDelay: 300,
-                devicePixelRatio: 1,
-                animation: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index',
+            stroke: {
+                curve: 'smooth',
+                width: 2,
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.35,
+                    opacityTo: 0.05,
+                    stops: [0, 90, 100],
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => {
-                                const val = Number(context.raw) || 0;
-                                return ` ${context.dataset.label}: ${formatBps(val)}`;
-                            },
-                        },
-                    },
+            },
+            colors: ['#0284c7', '#6366f1'],
+            series: [
+                {
+                    name: 'Rx (Download)',
+                    data: [...rxData],
                 },
-                scales: {
-                    x: {
-                        display: false,
-                        grid: { display: false },
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(150, 150, 150, 0.08)' },
-                        ticks: {
-                            callback: (val) => formatBps(Number(val)),
-                            font: { size: 9, family: 'monospace' },
-                            maxTicksLimit: 4,
-                            color: '#888888',
-                        },
+                {
+                    name: 'Tx (Upload)',
+                    data: [...txData],
+                },
+            ],
+            xaxis: {
+                categories: [...labels],
+                labels: {
+                    show: false,
+                },
+                axisBorder: {
+                    show: false,
+                },
+                axisTicks: {
+                    show: false,
+                },
+                tooltip: {
+                    enabled: false,
+                },
+                crosshairs: {
+                    show: true,
+                    stroke: {
+                        color: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                        dashArray: 3,
                     },
                 },
             },
-        });
+            yaxis: {
+                min: 0,
+                forceNiceScale: true,
+                labels: {
+                    formatter: (val: number) => formatBps(val),
+                    style: {
+                        colors: '#888888',
+                        fontSize: '9px',
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                    },
+                },
+            },
+            grid: {
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+                strokeDashArray: 3,
+                padding: {
+                    top: -12,
+                    right: 8,
+                    bottom: -6,
+                    left: 10,
+                },
+            },
+            markers: {
+                size: 0,
+                hover: {
+                    size: 4,
+                },
+            },
+            dataLabels: {
+                enabled: false,
+            },
+            legend: {
+                show: false,
+            },
+            theme: {
+                mode: isDark ? 'dark' : 'light',
+            },
+            tooltip: {
+                theme: isDark ? 'dark' : 'light',
+                shared: true,
+                intersect: false,
+                y: {
+                    formatter: (val: number) => formatBps(val ?? 0),
+                },
+            },
+        };
+
+        chartInstance = new ApexCharts(chartContainerRef, options);
+        chartInstance.render();
     }
 
     async function fetchTraffic(force = false) {
@@ -230,7 +276,19 @@
                 }
 
                 if (chartInstance && isPageVisible.value && !isStreamPaused && !routerContextStore.isOffline) {
-                    chartInstance.update('none');
+                    chartInstance.updateOptions(
+                        {
+                            series: [
+                                { name: 'Rx (Download)', data: [...rxData] },
+                                { name: 'Tx (Upload)', data: [...txData] },
+                            ],
+                            xaxis: {
+                                categories: [...labels],
+                            },
+                        },
+                        false,
+                        false
+                    );
                 }
             } else if (res.data.is_polling_paused) {
                 routerContextStore.recordFailure('Router offline');
@@ -308,6 +366,31 @@
         }
     });
 
+    // Reactively update ApexCharts theme when dark/light mode changes
+    $effect(() => {
+        const isDark = themeStore.isDark;
+        if (chartInstance) {
+            chartInstance.updateOptions(
+                {
+                    theme: { mode: isDark ? 'dark' : 'light' },
+                    tooltip: { theme: isDark ? 'dark' : 'light' },
+                    grid: {
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+                    },
+                    xaxis: {
+                        crosshairs: {
+                            stroke: {
+                                color: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                            },
+                        },
+                    },
+                },
+                false,
+                false
+            );
+        }
+    });
+
     let currentChartRouterId: number | null = null;
 
     $effect(() => {
@@ -323,7 +406,19 @@
                 txData.push(0);
             }
             if (chartInstance) {
-                chartInstance.update('none');
+                chartInstance.updateOptions(
+                    {
+                        series: [
+                            { name: 'Rx (Download)', data: [...rxData] },
+                            { name: 'Tx (Upload)', data: [...txData] },
+                        ],
+                        xaxis: {
+                            categories: [...labels],
+                        },
+                    },
+                    false,
+                    false
+                );
             }
             fetchInterfaces().then(() => {
                 if (!routerContextStore.isOffline && !routerContextStore.isPollingPaused && routerContextStore.consecutiveFailures < routerContextStore.maxRetries) {
@@ -418,20 +513,47 @@
         </div>
     </div>
 
-    <!-- HTML5 Canvas Hardware-Accelerated Chart (Powered by Chart.js) -->
-    <div class="relative w-full h-40 bg-background/50 rounded-xl border border-border/60 overflow-hidden">
-        <canvas bind:this={canvasRef} class="block w-full h-full"></canvas>
+    <!-- Real-Time Bandwidth Visualizer (Powered by ApexCharts) -->
+    <div class="relative w-full h-44 bg-background/50 rounded-xl border border-border/60 overflow-hidden p-1">
+        <div bind:this={chartContainerRef} class="w-full h-full min-h-[160px]"></div>
 
         <!-- Chart Legend -->
-        <div class="absolute bottom-2 right-3 flex items-center space-x-3 text-[10px] font-mono text-muted-foreground bg-card px-2 py-1 rounded-md border border-border/80 shadow-xs pointer-events-none">
-            <span class="flex items-center space-x-1">
-                <span class="w-2 h-0.5 bg-sky-500 inline-block"></span>
+        <div class="absolute bottom-2 right-3 z-10 flex items-center space-x-3 text-[10px] font-mono text-muted-foreground bg-card/90 backdrop-blur-xs px-2.5 py-1 rounded-md border border-border/80 shadow-xs pointer-events-none">
+            <span class="flex items-center space-x-1.5">
+                <span class="w-2 h-0.5 bg-sky-500 rounded-full inline-block"></span>
                 <span>Rx (Download)</span>
             </span>
-            <span class="flex items-center space-x-1">
-                <span class="w-2 h-0.5 bg-indigo-500 inline-block"></span>
+            <span class="flex items-center space-x-1.5">
+                <span class="w-2 h-0.5 bg-indigo-500 rounded-full inline-block"></span>
                 <span>Tx (Upload)</span>
             </span>
         </div>
     </div>
 </div>
+
+<style>
+    :global(.apexcharts-tooltip) {
+        background: var(--card) !important;
+        border: 1px solid var(--border) !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+        border-radius: 0.5rem !important;
+        color: var(--foreground) !important;
+    }
+    :global(.apexcharts-tooltip-title) {
+        background: var(--muted) !important;
+        border-bottom: 1px solid var(--border) !important;
+        font-family: ui-monospace, SFMono-Regular, monospace !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: var(--foreground) !important;
+    }
+    :global(.apexcharts-tooltip-text-y-value),
+    :global(.apexcharts-tooltip-text-y-label) {
+        color: var(--foreground) !important;
+        font-family: ui-monospace, SFMono-Regular, monospace !important;
+        font-size: 11px !important;
+    }
+    :global(.apexcharts-xaxistooltip) {
+        display: none !important;
+    }
+</style>

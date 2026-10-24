@@ -93,6 +93,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configured Laravel Boost guidelines, MCP server, and skills for IDE/AI pair programming.
 
 ### Changed
+- Converted live traffic and WAN throughput visualizer from Chart.js to **ApexCharts**:
+  - Replaced `chart.js` with `apexcharts` in `package.json` and refactored `InterfaceTrafficChart.svelte`.
+  - Implemented zero-animation real-time SVG streaming (`animations.enabled: false`) to ensure high efficiency and zero CPU stutter.
+  - Added dynamic theme synchronization with TikPulse `themeStore` supporting instant dark/light mode palette transitions.
+  - Styled custom `.apexcharts-tooltip` and crosshairs matching TikPulse semantic OKLCH tokens and monospace metrics typography.
 - Migrated Vite build configuration from `@vitejs/plugin-vue` to `@sveltejs/vite-plugin-svelte` with code-splitting.
 - Completely removed legacy Vue 3 dependencies, Pinia, Vue Router, and obsolete `.vue` views and components.
 - Maintained strict UI/UX uniformity with semantic Tailwind CSS tokens and bilingual English/Indonesian localization.

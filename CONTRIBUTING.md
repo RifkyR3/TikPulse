@@ -104,7 +104,7 @@ To maintain clean architecture and enterprise stability, please adhere to these 
 - Use pure SvelteForge UI primitives in `resources/js/components/ui/` (`sidebar`, `card`, `button`, `badge`, `breadcrumb`, `avatar`, `input`, `separator`).
 - Dynamically guard actions and navigation links using `authStore.can(module, ability)`.
 - Svelte 5 reactive stores (`.svelte.ts`) with `localStorage` persistence and custom `DataTable.svelte` for tabular displays.
-- Real-time charts must use **Chart.js** with `animation: false` for hardware-accelerated canvas rendering without lag.
+- Real-time charts must use **ApexCharts** with `animations.enabled: false` for smooth streaming without lag.
 - Follow UI Uniformity Standards: studio pill badge, `h2 font-black` title, primary gradient CTAs (`from-sky-600 to-indigo-600`), and dark/light semantic design tokens.
 
 ### 5. Code Formatting & Static Analysis
