@@ -48,13 +48,13 @@ Ensure your development environment meets the following requirements:
 
 5. Install frontend dependencies and build:
    ```bash
-   npm install
-   npm run build
+   pnpm install
+   pnpm run build
    ```
 
 6. Start local development server:
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 ---
@@ -115,7 +115,7 @@ Run these checks before submitting any pull request:
 php85 vendor/bin/pint --format agent
 
 # Check TypeScript types
-npm run types:check
+pnpm run types:check
 
 # Run test suite
 php85 artisan test
@@ -141,7 +141,7 @@ Categorize your changes using:
 
 Before opening a pull request, verify that:
 - [ ] Your code passes all tests (`php85 artisan test`).
-- [ ] TypeScript compiles cleanly (`npm run types:check`).
+- [ ] TypeScript compiles cleanly (`pnpm run types:check`).
 - [ ] Code has been formatted using Laravel Pint (`php85 vendor/bin/pint --format agent`).
 - [ ] `CHANGELOG.md` has been updated with a clear summary of your changes.
 - [ ] RBAC permissions (`module.access`) and router scoping (`router.context`) are applied.

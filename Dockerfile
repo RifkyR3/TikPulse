@@ -1,16 +1,18 @@
 # ==============================================================================
 # Stage 1: Build Frontend Assets (Svelte 5 + Inertia.js v3 + Vite + Tailwind CSS v4)
 # ==============================================================================
-FROM node:22-alpine AS frontend-builder
+FROM node:24-alpine AS frontend-builder
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+RUN corepack enable && corepack prepare pnpm@^10.12 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+RUN pnpm install --frozen-lockfile
 
 COPY resources/ ./resources/
 COPY public/ ./public/
 COPY vite.config.ts tsconfig.json svelte.config.js ./
-RUN npm run build
+RUN pnpm run build
 
 # ==============================================================================
 # Stage 2: Install Composer Dependencies
@@ -28,40 +30,29 @@ RUN composer install \
     --ignore-platform-reqs
 
 # ==============================================================================
-# Stage 3: Production PHP Runtime (PHP 8.4 FPM Alpine)
+# Stage 3: Production PHP Runtime (PHP 8.5 FPM Alpine)
 # ==============================================================================
-FROM php:8.4-fpm-alpine AS final
+FROM php:8.5-fpm-alpine AS final
 
 LABEL maintainer="TikPulse Team"
 LABEL description="TikPulse Enterprise MikroTik Voucher Management System"
 
 WORKDIR /var/www/html
 
-# Install system dependencies and PHP build requirements
-RUN apk add --no-cache \
-    postgresql-dev \
-    libzip-dev \
-    icu-dev \
-    oniguruma-dev \
-    linux-headers \
-    curl \
-    unzip \
-    busybox-extras \
-    && docker-php-ext-configure pgsql -with-pgsql=/usr/include \
-    && docker-php-ext-install -j$(nproc) \
+# Install mlocati docker-php-extension-installer
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+
+# Install system utilities and PHP extensions via docker-php-extension-installer
+RUN apk add --no-cache curl unzip busybox-extras \
+    && install-php-extensions \
         pdo_pgsql \
         pgsql \
         bcmath \
         sockets \
         pcntl \
         zip \
-        opcache \
         intl \
-    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del .build-deps \
-    && rm -rf /tmp/pear
+        redis
 
 # Configure PHP for production
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \

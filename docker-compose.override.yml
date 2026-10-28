@@ -35,7 +35,7 @@ services:
   # Activated automatically when using: docker compose --profile dev up
   # ----------------------------------------------------------------------------
   vite:
-    image: node:22-slim
+    image: node:24-slim
     container_name: tikpulse-vite
     profiles:
       - dev
@@ -46,7 +46,7 @@ services:
       - vite_node_modules:/app/node_modules
     ports:
       - "5173:5173"
-    command: sh -c "npm install && npm run dev:vite"
+    command: sh -c "corepack enable && pnpm install && pnpm run dev:vite"
     networks:
       - tikpulse-net
 

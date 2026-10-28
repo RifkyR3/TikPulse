@@ -183,13 +183,13 @@ docker compose -f docker-compose.yml up -d --build
 
 5. **Install frontend dependencies & build**:
    ```bash
-   npm install
-   npm run build
+   pnpm install
+   pnpm run build
    ```
 
 6. **Start Development Server**:
    ```powershell
-   npm run dev
+   pnpm run dev
    ```
    *Starts both Laravel backend (`http://localhost:8000`) and Vite dev server (`http://localhost:5173`) concurrently.*
 
@@ -233,10 +233,10 @@ php85 artisan test
 php85 vendor/bin/pint --format agent
 
 # Validate TypeScript types
-npm run types:check
+pnpm run types:check
 
 # Compile production frontend assets
-npm run build
+pnpm run build
 ```
 
 ---

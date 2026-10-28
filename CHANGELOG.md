@@ -93,6 +93,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configured Laravel Boost guidelines, MCP server, and skills for IDE/AI pair programming.
 
 ### Changed
+- **Package Manager & Node.js Runtime Upgrade**:
+  - Migrated frontend package management from `npm` to `pnpm` (`^10.12`) with `pnpm-lock.yaml` and `pnpm-workspace.yaml`.
+  - Standardized on Node.js 24 LTS (`^24.22`) across all environments, avoiding static/hardcoded patch version locking.
+  - Added `.nvmrc` (`24`) and `.node-version` (`24`) for automatic version manager resolution.
+  - Configured `packageManager` and `engines` (`node: "^24.22"`, `pnpm: "^10.12"`) in `package.json`.
+  - Upgraded `@types/node` to `^24.19.2`.
+- **Container Runtime, PHP 8.5 & Extension Installer Upgrade**:
+  - Upgraded production and development container runtime in [`Dockerfile`](file:///d:/Program/web/www/PHP/TikPulse/Dockerfile) to `php:8.5-fpm-alpine`.
+  - Replaced manual `apk add`, `pecl install`, and `docker-php-ext-*` scripts with [`mlocati/docker-php-extension-installer`](https://github.com/mlocati/docker-php-extension-installer) for streamlined, reliable PHP extension installation (`pdo_pgsql`, `pgsql`, `bcmath`, `sockets`, `pcntl`, `zip`, `intl`, `redis`).
+  - Automatically manages runtime shared libraries and purges temporary compiler artifacts, reducing container image attack surface and size.
+  - Updated [`docker-compose.yml`](file:///d:/Program/web/www/PHP/TikPulse/docker-compose.yml) service descriptions to reflect PHP 8.5-FPM.
 - Converted live traffic and WAN throughput visualizer from Chart.js to **ApexCharts**:
   - Replaced `chart.js` with `apexcharts` in `package.json` and refactored `InterfaceTrafficChart.svelte`.
   - Implemented zero-animation real-time SVG streaming (`animations.enabled: false`) to ensure high efficiency and zero CPU stutter.

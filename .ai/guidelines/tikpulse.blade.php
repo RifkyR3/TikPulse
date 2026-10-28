@@ -39,6 +39,7 @@
   - Use `DataTable.svelte`, semantic Tailwind tokens (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`), and uniform primary gradient for CTAs (`bg-gradient-to-r from-sky-600 to-indigo-600`).
 
 ## 6. Pre-Finalization Checklist & Versioning
+- Runtime & Package Manager: Node.js LTS (`^24.22`) and `pnpm` (`^10.12`). Do not lock to static/hardcoded patch versions (use semver range, e.g., `^24.22`).
 - Lint with PHP 8.5: `php85 vendor/bin/pint --format agent`.
-- Test & Types: `php85 vendor/bin/phpunit` and `npm run types:check`.
+- Test & Types: `php85 vendor/bin/phpunit` and `pnpm run types:check`.
 - Mandatory: Record all changes in `CHANGELOG.md` under `[Unreleased]` (`Added`, `Changed`, `Fixed`, `Security`) adhering to Keep a Changelog.
