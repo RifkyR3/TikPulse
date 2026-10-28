@@ -69,13 +69,14 @@ class AuthStore {
         return this.user.allowed_router_ids.includes(routerId);
     }
 
-    async login(email: string, password: string, remember = false): Promise<boolean> {
+    async login(loginOrEmail: string, password: string, remember = false): Promise<{ success: boolean; accountType?: string }> {
         this.isLoading = true;
         this.error = null;
 
         try {
             const res = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/login', {
-                email,
+                login: loginOrEmail,
+                email: loginOrEmail,
                 password,
                 remember,
             });
@@ -83,23 +84,32 @@ class AuthStore {
             if (res.data.status === 'success' && res.data.data) {
                 this.user = res.data.data.user;
                 this.token = res.data.data.token;
+                const accountType = res.data.data.account_type || (this.user.role === 'customer' ? 'customer' : 'admin');
+
                 if (typeof localStorage !== 'undefined') {
                     localStorage.setItem('tikpulse_token', res.data.data.token);
                     localStorage.setItem('tikpulse_user', JSON.stringify(res.data.data.user));
                     if (remember) {
-                        localStorage.setItem('tikpulse_remembered_email', email);
+                        localStorage.setItem('tikpulse_remembered_email', loginOrEmail);
                     } else {
                         localStorage.removeItem('tikpulse_remembered_email');
                     }
                 }
 
                 this.applyUserSettings();
-                return true;
+                return { success: true, accountType };
             }
-            return false;
+            return { success: false };
         } catch (err: any) {
-            this.error = err.response?.data?.message || 'Invalid credentials or login failed.';
-            return false;
+            const serverMsg = err.response?.data?.message;
+            if (serverMsg === 'These credentials do not match our records.' || err.response?.data?.errors?.email) {
+                this.error = localeStore.locale === 'id'
+                    ? 'Kombinasi identitas atau kata sandi tidak sesuai.'
+                    : 'These credentials do not match our records.';
+            } else {
+                this.error = serverMsg || (localeStore.locale === 'id' ? 'Login gagal. Silakan coba lagi.' : 'Invalid credentials or login failed.');
+            }
+            return { success: false };
         } finally {
             this.isLoading = false;
         }
@@ -121,6 +131,9 @@ class AuthStore {
             }
             if (typeof sessionStorage !== 'undefined') {
                 sessionStorage.removeItem('tikpulse_memory_route');
+            }
+            if (typeof document !== 'undefined') {
+                document.cookie = 'tikpulse_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
             }
             router.visit('/login');
         }

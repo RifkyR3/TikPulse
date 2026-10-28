@@ -125,7 +125,7 @@ class ActiveUserController extends Controller
 
             return response()->json([
                 'status' => $success ? 'success' : 'error',
-                'message' => $success ? 'Hotspot user session disconnected.' : 'Failed to disconnect user session.',
+                'message' => $success ? __('vouchers.session_disconnected') : __('vouchers.disconnect_failed'),
             ]);
         } catch (Exception $e) {
             return response()->json([

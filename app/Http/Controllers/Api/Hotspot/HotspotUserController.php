@@ -8,10 +8,14 @@ use App\Application\SafeMode\Services\MikrotikSafeModeGuard;
 use App\Domain\SafeMode\Enums\DestructiveAction;
 use App\Http\Controllers\Controller;
 use App\Infrastructure\Network\Mikrotik\Services\HotspotVoucherService;
+use App\Models\HotspotProfile;
 use App\Models\Router;
+use App\Models\User;
+use App\Models\Voucher;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class HotspotUserController extends Controller
 {
@@ -30,7 +34,7 @@ class HotspotUserController extends Controller
         if ($connService->isCircuitOpen($router)) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Router {$router->name} is offline. Polling paused to prevent timeouts.",
+                'message' => __('common.router_offline', ['name' => $router->name]),
                 'data' => [],
                 'total' => 0,
                 'is_polling_paused' => true,
@@ -79,7 +83,7 @@ class HotspotUserController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => "Hotspot user '{$validated['name']}' added to MikroTik successfully.",
+                'message' => __('vouchers.hotspot_user_created', ['name' => $validated['name']]),
             ], 201);
         } catch (Exception $e) {
             return response()->json([
@@ -115,13 +119,13 @@ class HotspotUserController extends Controller
             if (! $deleted) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => "Hotspot user '{$username}' not found on router.",
+                    'message' => __('vouchers.hotspot_user_not_found', ['name' => $username]),
                 ], 404);
             }
 
             return response()->json([
                 'status' => 'success',
-                'message' => "Hotspot user '{$username}' removed from MikroTik.",
+                'message' => __('vouchers.hotspot_user_deleted', ['name' => $username]),
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -129,5 +133,88 @@ class HotspotUserController extends Controller
                 'message' => 'Failed to remove hotspot user: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Pull existing Hotspot Users from MikroTik into database (vouchers and customer user accounts).
+     */
+    public function sync(Router $router): JsonResponse
+    {
+        try {
+            $rosUsers = $this->hotspotService->getHotspotUsers($router, true);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to query MikroTik Hotspot users: '.$e->getMessage(),
+            ], 502);
+        }
+
+        $defaultProfile = HotspotProfile::where('router_id', $router->id)->first();
+        if (! $defaultProfile) {
+            $defaultProfile = HotspotProfile::create([
+                'router_id' => $router->id,
+                'name' => 'default',
+                'shared_users' => 1,
+                'is_active' => true,
+            ]);
+        }
+
+        $synced = [];
+        foreach ($rosUsers as $item) {
+            $name = $item['name'] ?? null;
+            if (! $name) {
+                continue;
+            }
+
+            $profileName = $item['profile'] ?? 'default';
+            $profile = HotspotProfile::where('router_id', $router->id)->where('name', $profileName)->first() ?? $defaultProfile;
+
+            $record = Voucher::firstOrNew([
+                'router_id' => $router->id,
+                'username' => $name,
+            ]);
+
+            $password = ! empty($item['password']) ? (string) $item['password'] : ($record->password ?: $name);
+
+            $record->password = $password;
+            $record->profile_id = $profile->id;
+            $record->comment = $item['comment'] ?? $record->comment;
+            $record->time_limit = $item['limit_uptime'] ?? $record->time_limit;
+            $record->data_limit_bytes = isset($item['limit_bytes_total']) ? (int) $item['limit_bytes_total'] : $record->data_limit_bytes;
+            $record->synced_to_router = true;
+            $record->sync_failed_reason = null;
+            $record->status = ! empty($item['disabled']) ? 'disabled' : 'available';
+
+            $record->save();
+
+            // Synchronize customer login account into users table
+            User::updateOrCreate(
+                [
+                    'email' => "hotspot_{$router->id}_{$name}@customer.tikpulse.local",
+                ],
+                [
+                    'name' => $name,
+                    'role' => 'customer',
+                    'password' => Hash::make($password),
+                    'is_active' => empty($item['disabled']),
+                    'settings' => [
+                        'account_type' => 'hotspot_customer',
+                        'router_id' => $router->id,
+                        'voucher_id' => $record->id,
+                        'theme' => 'system',
+                        'accent_color' => 'sky',
+                        'preferred_locale' => 'id',
+                    ],
+                ]
+            );
+
+            $synced[] = $record;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => __('vouchers.hotspot_users_synced', ['count' => count($synced)]),
+            'data' => $synced,
+        ]);
     }
 }

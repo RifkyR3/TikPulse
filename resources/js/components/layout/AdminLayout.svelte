@@ -6,8 +6,10 @@
     import AppSidebar from '@/components/layout/AppSidebar.svelte';
     import AppHeader from '@/components/layout/AppHeader.svelte';
     import SimulationBanner from '@/components/layout/SimulationBanner.svelte';
+    import EmailVerificationBanner from '@/components/layout/EmailVerificationBanner.svelte';
     import SafeModeUnlockModal from '@/components/safe-mode/SafeModeUnlockModal.svelte';
     import RouterModal from '@/components/routers/RouterModal.svelte';
+    import { router } from '@inertiajs/svelte';
     import { Toaster } from 'svelte-sonner';
 
     let { children }: { children?: import('svelte').Snippet; title?: string } = $props();
@@ -19,6 +21,9 @@
         const sharedUser = (page.props as any)?.auth?.user;
         if (sharedUser && (!authStore.user || authStore.user.id !== sharedUser.id || authStore.user.simulated_group_id !== sharedUser.simulated_group_id)) {
             authStore.initFromPageProps(sharedUser);
+        }
+        if (authStore.user?.role === 'customer') {
+            router.visit('/status');
         }
     });
 
@@ -37,6 +42,9 @@
 
     <!-- SvelteForge Inset Content Area -->
     <Sidebar.Inset>
+        <!-- Email Verification Banner (Active when logged in user is unverified) -->
+        <EmailVerificationBanner />
+
         <!-- Simulation Warning Banner (Active when superadmin tests role) -->
         <SimulationBanner />
 

@@ -84,7 +84,7 @@ class VoucherController extends Controller
         if ($batch->router_id !== $router->id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Batch does not belong to specified router.',
+                'message' => __('vouchers.batch_not_found'),
             ], 404);
         }
 
@@ -141,7 +141,10 @@ class VoucherController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "Successfully generated {$result['vouchers_count']} vouchers ({$result['synced_count']} synced to RouterOS).",
+            'message' => __('vouchers.generated', [
+                'vouchers_count' => $result['vouchers_count'],
+                'synced_count' => $result['synced_count'],
+            ]),
             'data' => $result,
         ], 201);
     }
@@ -166,7 +169,7 @@ class VoucherController extends Controller
         } else {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Please provide either batch_id or voucher_ids.',
+                'message' => __('vouchers.provide_batch_or_ids'),
             ], 422);
         }
 
@@ -177,7 +180,7 @@ class VoucherController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "Marked {$count} vouchers as printed.",
+            'message' => __('vouchers.marked_printed', ['count' => $count]),
         ]);
     }
 
@@ -214,7 +217,7 @@ class VoucherController extends Controller
         } else {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Please provide batch_id or voucher_ids to delete.',
+                'message' => __('vouchers.provide_ids_to_delete'),
             ], 422);
         }
 
@@ -240,7 +243,7 @@ class VoucherController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "Successfully deleted {$deletedCount} vouchers from system and MikroTik.",
+            'message' => __('vouchers.deleted', ['count' => $deletedCount]),
         ]);
     }
 }

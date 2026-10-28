@@ -25,6 +25,8 @@ export interface User {
         all_routers: boolean;
     } | null;
     is_active: boolean;
+    is_email_verified?: boolean;
+    email_verified_at?: string | null;
     avatar_url?: string | null;
     preferred_locale?: 'en' | 'id';
     settings?: UserSettings;
@@ -53,5 +55,7 @@ export interface AuthResponseData {
     user: User;
     token: string;
     token_type: string;
+    account_type?: string;
     remember?: boolean;
 }
+

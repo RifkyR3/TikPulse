@@ -91,7 +91,7 @@ class HotspotProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Hotspot profile created successfully.',
+            'message' => __('vouchers.hotspot_profile_created', ['name' => $profile->name]),
             'data' => $profile,
         ], 201);
     }
@@ -139,7 +139,7 @@ class HotspotProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Synced '.count($synced).' profiles from RouterOS.',
+            'message' => __('vouchers.hotspot_profiles_synced', ['count' => count($synced)]),
             'data' => $synced,
         ]);
     }
@@ -163,9 +163,9 @@ class HotspotProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile updated successfully.',
+            'message' => __('vouchers.hotspot_profile_updated', ['name' => $profile->name]),
             'data' => $profile,
-        ]);
+        ], 200);
     }
 
     /**
@@ -187,7 +187,7 @@ class HotspotProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile deleted successfully.',
+            'message' => __('vouchers.hotspot_profile_deleted', ['name' => $profile->name]),
         ]);
     }
 }

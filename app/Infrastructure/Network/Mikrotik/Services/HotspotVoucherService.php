@@ -148,6 +148,66 @@ class HotspotVoucherService
     }
 
     /**
+     * Disconnect/kick all active sessions for a specific hotspot user.
+     */
+    public function disconnectActiveUser(Router $router, string $username): int
+    {
+        $driver = $this->connectionService->getDriver($router);
+        $sessions = $driver->command('/ip/hotspot/active/print', [
+            '?user='.$username,
+        ]);
+
+        $kicked = 0;
+        foreach ($sessions as $session) {
+            if (isset($session['.id'])) {
+                try {
+                    $driver->command('/ip/hotspot/active/remove', [
+                        '=.id='.$session['.id'],
+                    ]);
+                    $kicked++;
+                } catch (\Throwable) {
+                }
+            }
+        }
+
+        Cache::forget("ros_active_users_{$router->id}");
+        Cache::forget("router_active_sessions_{$router->id}");
+
+        return $kicked;
+    }
+
+    /**
+     * Update password for a hotspot user on MikroTik router.
+     * Auto-creates the hotspot user if not yet present on the router, and kicks active session.
+     */
+    public function updateHotspotUserPassword(Router $router, string $username, string $newPassword, string $profile = 'default'): bool
+    {
+        $driver = $this->connectionService->getDriver($router);
+        $find = $driver->command('/ip/hotspot/user/print', [
+            '?name='.$username,
+        ]);
+
+        if (empty($find) || ! isset($find[0]['.id'])) {
+            $driver->command('/ip/hotspot/user/add', [
+                '=name='.$username,
+                '=password='.$newPassword,
+                '=profile='.$profile,
+            ]);
+        } else {
+            $id = $find[0]['.id'];
+            $driver->command('/ip/hotspot/user/set', [
+                '=.id='.$id,
+                '=password='.$newPassword,
+            ]);
+        }
+
+        $this->disconnectActiveUser($router, $username);
+        Cache::forget("ros_hotspot_users_{$router->id}");
+
+        return true;
+    }
+
+    /**
      * Retrieve all configured Hotspot Users from MikroTik (/ip/hotspot/user).
      *
      * @return array<int, array<string, mixed>>
@@ -192,6 +252,7 @@ class HotspotVoucherService
             $users[] = [
                 'id' => $item['.id'] ?? '',
                 'name' => (string) $item['name'],
+                'password' => (string) ($item['password'] ?? ''),
                 'profile' => (string) ($item['profile'] ?? 'default'),
                 'server' => (string) ($item['server'] ?? 'all'),
                 'uptime' => (string) ($item['uptime'] ?? '0s'),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\User;
 
+use App\Application\Customer\Services\CustomerCredentialSyncService;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\Group;
@@ -11,9 +12,14 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
+    public function __construct(
+        protected CustomerCredentialSyncService $credentialSyncService
+    ) {}
+
     /**
      * List all users with filtering, search, and pagination.
      */
@@ -87,7 +93,7 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User created successfully.',
+            'message' => __('users.created'),
             'data' => new UserResource($user),
         ], 201);
     }
@@ -125,7 +131,7 @@ class UserController extends Controller
             return response()->json([
                 'status' => 'error',
                 'code' => 'CANNOT_DEACTIVATE_SELF',
-                'message' => 'You cannot deactivate your own account.',
+                'message' => __('users.cannot_deactivate_self'),
             ], 422);
         }
 
@@ -145,7 +151,7 @@ class UserController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'code' => 'LAST_SUPERADMIN_PROTECTED',
-                    'message' => 'Cannot demote or deactivate the last remaining active Super Administrator.',
+                    'message' => __('users.cannot_demote_last_admin'),
                 ], 422);
             }
         }
@@ -170,7 +176,7 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User updated successfully.',
+            'message' => __('users.updated'),
             'data' => new UserResource($user),
         ]);
     }
@@ -186,7 +192,7 @@ class UserController extends Controller
             return response()->json([
                 'status' => 'error',
                 'code' => 'CANNOT_DELETE_SELF',
-                'message' => 'You cannot delete your own account.',
+                'message' => __('users.cannot_delete_self'),
             ], 422);
         }
 
@@ -203,7 +209,7 @@ class UserController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'code' => 'LAST_SUPERADMIN_PROTECTED',
-                    'message' => 'Cannot delete the last remaining active Super Administrator.',
+                    'message' => __('users.cannot_delete_last_admin'),
                 ], 422);
             }
         }
@@ -213,7 +219,51 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'User deleted successfully.',
+            'message' => __('users.deleted'),
+        ]);
+    }
+
+    /**
+     * Reset password for a specified user account (Authorized operators/admins only).
+     */
+    public function resetPassword(Request $request, User $user): JsonResponse
+    {
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
+
+        // Guardrail: Non-superadmins cannot reset passwords for Super Administrators
+        if ($user->isSuperAdmin() && ! ($currentUser && $currentUser->isSuperAdmin())) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'SUPERADMIN_PASSWORD_PROTECTED',
+                'message' => __('users.reset_admin_forbidden'),
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        // Auto-generate secure 12-char password if not provided
+        $newPassword = ! empty($validated['password']) ? (string) $validated['password'] : Str::random(12);
+
+        $accountType = $this->credentialSyncService->resolveAccountType($user);
+
+        // Web portal password only: do not update router or router database entities
+        $user->password = Hash::make($newPassword);
+        $user->save();
+        $user->tokens()->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => __('users.password_reset_success', ['name' => $user->name]),
+            'data' => [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'temporary_password' => $newPassword,
+                'account_type' => $user->role === 'customer' ? ($user->settings['account_type'] ?? 'customer') : 'admin',
+                'synced_to_router' => false,
+            ],
         ]);
     }
 }

@@ -77,7 +77,7 @@ class GroupController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Group created successfully.',
+            'message' => __('groups.created'),
             'data' => new GroupResource($group),
         ], 201);
     }
@@ -143,7 +143,7 @@ class GroupController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Group updated successfully.',
+            'message' => __('groups.updated'),
             'data' => new GroupResource($group),
         ]);
     }
@@ -157,7 +157,7 @@ class GroupController extends Controller
             return response()->json([
                 'status' => 'error',
                 'code' => 'SUPERADMIN_GROUP_PROTECTED',
-                'message' => 'The Super Administrator group cannot be deleted.',
+                'message' => __('groups.cannot_delete_superadmin'),
             ], 403);
         }
 
@@ -165,7 +165,7 @@ class GroupController extends Controller
             return response()->json([
                 'status' => 'error',
                 'code' => 'GROUP_HAS_ACTIVE_USERS',
-                'message' => 'Cannot delete group with assigned active users. Reassign users before deleting.',
+                'message' => __('groups.cannot_delete_with_users'),
             ], 422);
         }
 
@@ -175,7 +175,7 @@ class GroupController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Group deleted successfully.',
+            'message' => __('groups.deleted'),
         ]);
     }
 }

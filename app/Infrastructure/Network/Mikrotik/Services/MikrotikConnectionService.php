@@ -6,6 +6,7 @@ namespace App\Infrastructure\Network\Mikrotik\Services;
 
 use App\Domain\Router\Enums\RouterProtocol;
 use App\Domain\Router\Enums\RouterStatus;
+use App\Infrastructure\Kafka\KafkaService;
 use App\Infrastructure\Network\Mikrotik\Contracts\MikrotikDriverInterface;
 use App\Infrastructure\Network\Mikrotik\Drivers\RestRouterOsDriver;
 use App\Infrastructure\Network\Mikrotik\Drivers\SocketRouterOsDriver;
@@ -22,6 +23,12 @@ class MikrotikConnectionService
 
     /** @var array<int, MikrotikDriverInterface> */
     protected array $activeConnections = [];
+
+    public function __construct(
+        protected ?KafkaService $kafka = null,
+    ) {
+        $this->kafka ??= app()->bound(KafkaService::class) ? app(KafkaService::class) : null;
+    }
 
     /**
      * Check if connection retry circuit is open (router offline and in cooldown).
@@ -99,9 +106,14 @@ class MikrotikConnectionService
         $plainPassword = $router->getDecryptedPassword();
         $useTls = $router->use_tls || $protocol === RouterProtocol::SocketSsl || $protocol === RouterProtocol::RestHttps;
 
+        $targetHost = $router->host;
+        if ($targetHost === 'mikrotik-dummy' && gethostbyname($targetHost) === $targetHost) {
+            $targetHost = '127.0.0.1';
+        }
+
         try {
             $driver->connect(
-                host: $router->host,
+                host: $targetHost,
                 port: $router->api_port,
                 username: $router->username,
                 password: $plainPassword,
@@ -209,6 +221,14 @@ class MikrotikConnectionService
 
             // Cache telemetry for 3 seconds to avoid duplicate socket handshakes
             Cache::put($cacheKey, $result, 3);
+
+            $this->kafka?->publishTelemetry($router->id, [
+                'router_id' => $router->id,
+                'router_name' => $router->name,
+                'status' => RouterStatus::Online->value,
+                'telemetry' => $normalizedResource,
+                'synced_at' => Carbon::now()->toIso8601String(),
+            ]);
 
             return $result;
         } catch (Exception $e) {

@@ -4,6 +4,7 @@ use App\Http\Middleware\AuthorizeModuleAccess;
 use App\Http\Middleware\EnsureSafeModeCompliance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveRouterContext;
+use App\Http\Middleware\SetAppLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'tikpulse_token']);
 
         $middleware->alias([
             'router.context' => ResolveRouterContext::class,
@@ -28,8 +29,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            SetAppLocale::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        $middleware->api(append: [
+            SetAppLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

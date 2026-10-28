@@ -260,6 +260,23 @@
         fetchVouchers(1);
     }
 
+    async function syncHotspotUsersFromRouter() {
+        if (!routerStore.activeRouter) return;
+        isSyncingUsers = true;
+        try {
+            const res = await apiClient.post<ApiResponse<any>>(
+                `/routers/${routerStore.activeRouter.id}/hotspot/users/sync`
+            );
+            toast.success(res.data.message || 'Hotspot users synchronized with credentials.');
+            await Promise.all([fetchHotspotUsers(), fetchVouchers(1)]);
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { message?: string } } };
+            toast.error(axiosErr.response?.data?.message || 'Failed to sync hotspot users.');
+        } finally {
+            isSyncingUsers = false;
+        }
+    }
+
     async function fetchHotspotUsers(showToast = false) {
         if (!routerStore.activeRouter) return;
         isLoadingUsers = true;
@@ -556,10 +573,10 @@
                 {#if activeTab === 'users'}
                     <button
                         type="button"
-                        onclick={() => fetchHotspotUsers(true)}
+                        onclick={syncHotspotUsersFromRouter}
                         disabled={isSyncingUsers || !routerStore.activeRouter}
                         class="px-3 py-2 rounded-xl border border-border hover:bg-muted text-xs font-semibold text-foreground flex items-center space-x-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                        title="Pull users from MikroTik (/ip/hotspot/user)"
+                        title="Pull and sync hotspot users into database"
                     >
                         <RefreshCw class="w-3.5 h-3.5 {isSyncingUsers ? 'animate-spin' : ''} mr-1" />
                         <span class="hidden sm:inline">{localeStore.t('vouchers.syncUsers')}</span>
@@ -594,6 +611,17 @@
                         <span>{localeStore.t('vouchers.newProfile')}</span>
                     </button>
                 {:else}
+                    <button
+                        type="button"
+                        onclick={syncHotspotUsersFromRouter}
+                        disabled={isSyncingUsers || !routerStore.activeRouter}
+                        class="px-3 py-2 rounded-xl border border-border hover:bg-muted text-xs font-semibold text-foreground flex items-center space-x-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        title="Pull and sync hotspot users into database"
+                    >
+                        <RefreshCw class="w-3.5 h-3.5 {isSyncingUsers ? 'animate-spin' : ''} mr-1" />
+                        <span class="hidden sm:inline">{localeStore.t('vouchers.syncUsers')}</span>
+                    </button>
+
                     <button
                         type="button"
                         onclick={() => (isGenerateModalOpen = true)}

@@ -81,7 +81,7 @@ class PppProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "PPP profile '{$profile->name}' created successfully.",
+            'message' => __('ppp.profile_created', ['name' => $profile->name]),
             'data' => $profile,
         ], 201);
     }
@@ -128,7 +128,7 @@ class PppProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Synced '.count($synced).' PPP profiles from RouterOS.',
+            'message' => __('ppp.profiles_synced', ['count' => count($synced)]),
             'data' => $synced,
         ]);
     }
@@ -166,7 +166,7 @@ class PppProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "PPP profile '{$profile->name}' updated successfully.",
+            'message' => __('ppp.profile_updated', ['name' => $profile->name]),
             'data' => $profile,
         ]);
     }
@@ -195,7 +195,7 @@ class PppProfileController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "PPP profile '{$profile->name}' deleted successfully.",
+            'message' => __('ppp.profile_deleted', ['name' => $profile->name]),
         ]);
     }
 

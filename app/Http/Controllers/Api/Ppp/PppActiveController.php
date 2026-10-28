@@ -73,7 +73,7 @@ class PppActiveController extends Controller
 
             return response()->json([
                 'status' => $success ? 'success' : 'error',
-                'message' => $success ? 'PPP connection disconnected.' : 'Failed to disconnect PPP connection.',
+                'message' => $success ? __('ppp.connection_disconnected') : __('ppp.disconnect_failed'),
             ]);
         } catch (Exception $e) {
             return response()->json([

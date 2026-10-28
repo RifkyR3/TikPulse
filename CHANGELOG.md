@@ -10,6 +10,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - Unreleased
 
 ### Added
+- **6-Digit Email Verification Code System**:
+  - `VerifyEmailCodeNotification` dispatching both a high-visibility 6-digit verification code (15-minute TTL via Cache) and standard signed verification URL in English and Indonesian.
+  - Endpoints `POST /api/v1/email/verification-notification` and `POST /api/v1/email/verify-code` (Sanctum) along with web route `POST /email/verify-code` (Inertia session).
+  - Interactive send toggle and 6-digit code input form in `EmailVerificationBanner.svelte` across admin layout and customer status portal.
+  - Verification code input and resend toggle integrated into `verify-email.svelte` and `CustomerProfileModal.svelte`.
+  - Comprehensive feature test suite `tests/Feature/EmailVerificationTest.php`.
+- **Hotspot & PPP Credential Synchronization & Customer Portal**:
+  - Automatic extraction of credentials (username and password) from RouterOS `/ip/hotspot/user/print` and `/ppp/secret/print`.
+  - Hotspot user sync endpoint (`POST /api/v1/routers/{router}/hotspot/users/sync`) storing vouchers and auto-provisioning customer accounts.
+  - PPP secret sync endpoint (`POST /api/v1/routers/{router}/ppp/secrets/sync`) capturing real passwords and synchronizing customer accounts.
+  - UI sync buttons in `VouchersIndex.svelte` and `DedicatedUsers.svelte` for one-click synchronization from MikroTik.
+  - Unified authentication supporting login with administrator email or Hotspot / PPP username and password.
+  - Dedicated Customer Dashboard Status portal (`/status`, `Pages/customer/Status.svelte`) providing live session metrics (uptime, IP, MAC, speed profile, upload/download traffic, quota remaining, validity/billing info) and session disconnect control.
+  - Customer Self-Service Profile Management (`PUT /api/v1/customer/profile` & `CustomerProfileModal.svelte`):
+    - Customer email address management: view and update email address with unique validation against existing users, automatic reset of verification status (`email_verified_at = null`), and dispatching of verification email to Mailpit.
+    - PPPoE contact info update (subscriber name, phone/WhatsApp, installation address).
+    - Password change with strict verification against current credentials, updating web portal authentication only while preserving router secrets on MikroTik RouterOS without disconnecting active sessions.
+    - Dedicated web view field for default router password / secret credentials with show/hide eye toggle and one-click copy/apply.
+    - Multi-tab personalization supporting theme modes, 6 accent colors, and bilingual switching (`en`/`id`).
+    - Customer portal status hero banner email indicator and verification banner `EmailVerificationBanner.svelte` with resend trigger.
+  - Customer API endpoints (`GET /api/v1/customer/status`, `PUT /api/v1/customer/profile`, `POST /api/v1/customer/disconnect`, `POST /api/v1/customer/logout`).
+- **User Management Password Reset**:
+  - Administrative password reset endpoint (`POST /api/v1/users/{user}/reset-password`) protected by `module.access:users,update` RBAC middleware.
+  - Supports auto-generating 12-character random secure passwords or setting manual passwords, immediately revoking active personal access tokens for invalidated sessions.
+  - Super Administrator protection guardrail preventing non-superadmins from resetting credentials of Super Administrators.
+  - Interactive UI modal `ResetPasswordModal.svelte` with one-click copy to clipboard in `UsersIndex.svelte`.
+- **Mailpit Email Testing Server for Local Development**:
+  - Docker service `mailpit` integrated in `docker-compose.yml` (`axllent/mailpit:latest`) with SMTP on port `1025` and Web UI dashboard on port `8025`, strictly scoped to development profile (`profiles: [dev]`).
+  - Default SMTP configuration set in `.env` and `.env.example` targeting `127.0.0.1:1025`.
+- **Apache Kafka Distributed Event Streaming & Telemetry Ingestion**:
+  - Docker service `kafka` integrated in `docker-compose.yml` (`apache/kafka:latest`) in KRaft single-node mode with dual listeners: internal container bridge on `kafka:29092` and host machine binding on port `9092` (`PLAINTEXT_HOST://localhost:9092`).
+  - Pure PHP socket-based Kafka service (`KafkaService`) implementing lightweight binary ProduceRequest v0 protocol with zero external C-extension dependencies.
+  - Automatic live telemetry streaming from `MikrotikConnectionService::testAndSyncTelemetry` to Kafka topic `tikpulse.telemetry`.
+  - Automatic Safe Mode audit logging dispatched to Kafka topic `tikpulse.safemode.audit` via `SafeModeAuditLog` model lifecycle observer.
+  - Artisan publishing command (`php artisan kafka:publish {topic} {message}`) and dedicated `config/kafka.php`.
+  - Environment variables `KAFKA_ENABLED`, `KAFKA_BROKERS`, `KAFKA_CLIENT_ID`, and topics registered across `.env`, `.env.example`, and `.env.docker.example`.
+- **Email Verification & Account Security**:
+  - Fortify email verification enabled (`MustVerifyEmail` and `Features::emailVerification()`).
+  - Svelte 5 authentication views: `verify-email.svelte`, `forgot-password.svelte`, and `reset-password.svelte`.
+  - Top alert `EmailVerificationBanner.svelte` displayed on `AdminLayout.svelte` for unverified operators with direct link to Mailpit web dashboard.
+  - Email verification status exposed via `UserResource` (`is_email_verified`, `email_verified_at`).
 - **Enterprise User Management**:
   - Full user account management with search, group filter, status filter, and pagination (`Pages/user/UsersIndex.svelte` and `components/user/UserModal.svelte`).
   - Account guardrails preventing self-deletion, self-deactivation, and demotion/deletion of the last remaining Super Administrator.
@@ -93,6 +134,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configured Laravel Boost guidelines, MCP server, and skills for IDE/AI pair programming.
 
 ### Changed
+- **Centralized Application-Wide Bilingual Localization**:
+  - Centralized all hardcoded strings and ternary language logic across all backend controllers into structured Laravel language files (`lang/en/` and `lang/id/` for `auth`, `common`, `customer`, `groups`, `ppp`, `routers`, `safemode`, `users`, `verification`, `vouchers`).
+  - Implemented `SetAppLocale` middleware in `bootstrap/app.php` resolving client locale from `X-Locale` HTTP header, session, user preference (`preferred_locale`), or system fallback.
+  - Configured `apiClient` in `resources/js/services/api.ts` to automatically transmit active `X-Locale` header from `localStorage`.
+  - Replaced hardcoded response messages across all API controllers (`AuthController`, `EmailVerificationController`, `CustomerStatusController`, `UserController`, `GroupController`, `RouterController`, `SafeModeController`, `VoucherController`, `HotspotUserController`, `HotspotProfileController`, `ActiveUserController`, `DedicatedUserController`, `PppProfileController`, `PppActiveController`).
+  - Synchronized frontend localization keys in `resources/js/locales/en.ts` and `resources/js/locales/id.ts`, updating `CustomerProfileModal.svelte`, `EmailVerificationBanner.svelte`, and `verify-email.svelte`.
+  - Added test coverage in `EmailVerificationTest.php` and `CustomerAuthTest.php` ensuring consistent bilingual messaging.
 - **Package Manager & Node.js Runtime Upgrade**:
   - Migrated frontend package management from `npm` to `pnpm` (`^10.12`) with `pnpm-lock.yaml` and `pnpm-workspace.yaml`.
   - Standardized on Node.js 24 LTS (`^24.22`) across all environments, avoiding static/hardcoded patch version locking.
@@ -114,6 +162,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Maintained strict UI/UX uniformity with semantic Tailwind CSS tokens and bilingual English/Indonesian localization.
 
 ### Fixed
+- Fixed customer profile email verification persistence (`CustomerProfileModal.svelte`, `Status.svelte`, `EmailVerificationBanner.svelte`, and `CustomerStatusController.php`) where entering, verifying, and saving a new email reset the verified status due to stale user model comparisons and unreactive verification badge conditions. Implemented reactive `isCurrentEmailVerified` derived state, cross-component `email-verified` event synchronization, and `$user->refresh()` safeguards across verification and status endpoints.
+- Fixed container SMTP resolution by configuring `MAIL_HOST: mailpit` in `docker-compose.yml` and `docker-compose.override.yml`, resolving connection refused errors from `tikpulse-app` to Mailpit.
+- Fixed missing `/api/v1/email/verification-notification` endpoint returning 404 on API-based email verification trigger.
+- Fixed email verification workflow by introducing direct 6-digit code entry with instant validation, eliminating reliance on external link redirection.
 - Fixed SQLSTATE[42703] PostgreSQL undefined column errors (`ip_address`, `is_active`, `board_name`) in `HandleInertiaRequests` middleware by resolving `Router` entities via `RouterResource::collection()->resolve()` and removing non-existent column projections and active status filters.
 - Added virtual `board_name` accessor to `Router` Eloquent model to mirror `RouterResource` behavior.
 - Fixed state persistence and disappearing actions on browser hard reload (`Ctrl + F5`):
@@ -135,4 +187,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Redesigned `Pages/auth/login.svelte` to match SvelteForge Admin Card form design with demo access callout while preserving the signature TikPulse gradient squircle logo.
   - Refactored `Pages/dashboard/Dashboard.svelte` telemetry grid to use SvelteForge Card and Badge design system.
   - Preserved the original TikPulse brand logo (`Activity` icon in gradient squircle `from-sky-500 via-indigo-500 to-primary`) across both `AppSidebar.svelte` and `login.svelte`.
+- Fixed Customer Authentication & Automatic Live Router Fallback for PPPoE / Hotspot subscribers:
+  - Added `prepareForValidation()` in `LoginRequest.php` to seamlessly normalize login identifiers regardless of whether `login`, `email`, or `username` keys are supplied.
+  - Implemented live MikroTik RouterOS credential fallback in `AuthController::login` and `FortifyServiceProvider::authenticateUsing`: when customer credentials are not found or differ from local DB, online routers are queried live via `PppService::getSecrets()` and `HotspotVoucherService::getHotspotUsers()`, auto-provisioning `DedicatedUser`/`Voucher` and customer `User` records on the spot.
+  - Excluded `tikpulse_token` from cookie encryption in `bootstrap/app.php` so Inertia web page visits can authenticate stateful sessions directly from API token cookies.
+  - Configured automatic role-based redirection in `routes/web.php` and `AdminLayout.svelte` ensuring authenticated customers navigating to `/` or `/dashboard` are routed directly to the `/status` Customer Dashboard Status portal.
+- Fixed Customer Portal Logout & Session Revocation:
+  - Removed customer redirect on `/login` in `routes/web.php` and prevented cookie auto-login on `/login` in `HandleInertiaRequests.php` so navigating to `/login` reliably displays the login interface.
+  - Enhanced `CustomerStatusController@logout` and `AuthController@logout` to revoke personal access tokens from the database, terminate web sessions via `Auth::guard('web')->logout()`, invalidate session data, and return matching expired cookies.
+  - Added dedicated `/logout` web route in `routes/web.php` for seamless Inertia and browser session termination.
+  - Updated `authStore.logout()` in `auth.svelte.ts` and `Status.svelte` to clear `document.cookie`, remove local state, halt real-time status polling, and transition cleanly to `/login`.
+- Customer Portal & Password Reset Isolation:
+  - Ensured that changing passwords in the Customer Portal (`CustomerStatusController::updateProfile`) or resetting passwords via User Management (`UserController::resetPassword`) and Fortify (`ResetUserPassword`) updates web portal credentials (`users.password`) only.
+  - Explicitly preserves physical MikroTik RouterOS connection secrets (`/ppp/secret` and `/ip/hotspot/user`) and local entity passwords (`dedicated_users` & `vouchers`), preventing unintended connection disruption and allowing subscribers to view their router secret at any time under "Default Password (Router Secret)".
+  - Enhanced `PppService` and `HotspotVoucherService` connection lifecycle and added fallback DNS resolution to `127.0.0.1` in `MikrotikConnectionService` for dev/test environments.
+
 

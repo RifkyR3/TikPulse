@@ -4,6 +4,7 @@
     import DataTable, { type Column } from '@/components/common/DataTable.svelte';
     import UserModal from '@/components/user/UserModal.svelte';
     import GroupModal from '@/components/user/GroupModal.svelte';
+    import ResetPasswordModal from '@/components/user/ResetPasswordModal.svelte';
     import { authStore } from '@/stores/auth.svelte';
     import { localeStore } from '@/stores/locale.svelte';
     import { routerContextStore } from '@/stores/routerContext.svelte';
@@ -27,6 +28,7 @@
         RefreshCw,
         ArrowRight,
         Layers,
+        KeyRound,
     } from '@lucide/svelte';
 
     // State
@@ -48,6 +50,9 @@
     // Modals
     let isUserModalOpen = $state(false);
     let userToEdit = $state<User | null>(null);
+
+    let isResetPasswordModalOpen = $state(false);
+    let userToResetPassword = $state<User | null>(null);
 
     let isGroupModalOpen = $state(false);
     let groupToEdit = $state<Group | null>(null);
@@ -266,6 +271,17 @@
 {#snippet actionsCell(row: User)}
     <div class="flex items-center justify-end gap-1.5">
         {#if authStore.can('users', 'update')}
+            <button
+                type="button"
+                onclick={() => {
+                    userToResetPassword = row;
+                    isResetPasswordModalOpen = true;
+                }}
+                class="p-1.5 rounded-lg border border-border hover:bg-sky-500/10 text-muted-foreground hover:text-sky-500 transition-colors cursor-pointer"
+                title={localeStore.locale === 'id' ? 'Reset Kata Sandi' : 'Reset Password'}
+            >
+                <KeyRound class="size-3.5" />
+            </button>
             <button
                 type="button"
                 onclick={() => {
@@ -587,5 +603,12 @@
         routers={routerContextStore.routers}
         onClose={() => (isGroupModalOpen = false)}
         onSaved={fetchGroups}
+    />
+
+    <ResetPasswordModal
+        isOpen={isResetPasswordModalOpen}
+        user={userToResetPassword}
+        onClose={() => (isResetPasswordModalOpen = false)}
+        onSuccess={fetchUsers}
     />
 </AdminLayout>

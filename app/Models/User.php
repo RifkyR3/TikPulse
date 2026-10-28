@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Notifications\VerifyEmailCodeNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -270,5 +272,20 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         $settings = $this->settings ?? [];
 
         return $settings[$key] ?? $default;
+    }
+
+    /**
+     * Send the email verification notification containing a 6-digit verification code.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $code = (string) random_int(100000, 999999);
+
+        Cache::put("email_verify_code_{$this->id}", [
+            'code' => $code,
+            'email' => $this->email,
+        ], now()->addMinutes(15));
+
+        $this->notify(new VerifyEmailCodeNotification($code));
     }
 }

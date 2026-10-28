@@ -79,7 +79,7 @@ class SafeModeController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Safe Mode temporarily unlocked for 15 minutes.',
+            'message' => __('safemode.unlocked'),
             'data' => [
                 'router_id' => $router->id,
                 'bypass_token' => $token,
@@ -102,7 +102,7 @@ class SafeModeController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Safe Mode re-locked. Destructive commands are protected.',
+            'message' => __('safemode.relocked'),
             'data' => new SafeModeStatusResource($router, false, null),
         ]);
     }
@@ -130,7 +130,7 @@ class SafeModeController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => $enabled ? 'Safe Mode enabled permanently.' : 'Safe Mode disabled.',
+            'message' => $enabled ? __('safemode.enabled_permanently') : __('safemode.disabled'),
             'data' => new SafeModeStatusResource($router, false, null),
         ]);
     }

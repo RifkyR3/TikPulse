@@ -11,9 +11,11 @@ use App\Infrastructure\Network\Mikrotik\Services\PppService;
 use App\Models\DedicatedUser;
 use App\Models\PppProfile;
 use App\Models\Router;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class DedicatedUserController extends Controller
 {
@@ -163,7 +165,7 @@ class DedicatedUserController extends Controller
         if (DedicatedUser::where('router_id', $router->id)->where('name', $validated['name'])->exists()) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Dedicated user '{$validated['name']}' already exists on this router.",
+                'message' => __('ppp.user_exists', ['name' => $validated['name']]),
             ], 422);
         }
 
@@ -218,7 +220,7 @@ class DedicatedUserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "Dedicated user '{$user->name}' created successfully.",
+            'message' => __('ppp.user_created', ['name' => $user->name]),
             'data' => $user,
         ], 201);
     }
@@ -283,9 +285,20 @@ class DedicatedUserController extends Controller
 
         $dedicatedUser->save();
 
+        if (array_key_exists('password', $validated) && ! empty($validated['password'])) {
+            $customerUser = User::where('name', $dedicatedUser->name)
+                ->orWhere('email', "ppp_{$router->id}_{$dedicatedUser->name}@customer.tikpulse.local")
+                ->first();
+            if ($customerUser) {
+                $customerUser->password = Hash::make($dedicatedUser->password);
+                $customerUser->tokens()->delete();
+                $customerUser->save();
+            }
+        }
+
         return response()->json([
             'status' => 'success',
-            'message' => "Dedicated user '{$dedicatedUser->name}' updated successfully.",
+            'message' => __('ppp.user_updated', ['name' => $dedicatedUser->name]),
             'data' => $dedicatedUser,
         ]);
     }
@@ -309,7 +322,7 @@ class DedicatedUserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "Dedicated user '{$dedicatedUser->name}' is now ".($newDisabled ? 'disabled' : 'enabled').'.',
+            'message' => __('ppp.user_status_changed', ['name' => $dedicatedUser->name, 'status' => $newDisabled ? 'disabled' : 'enabled']),
             'data' => $dedicatedUser,
         ]);
     }
@@ -338,7 +351,7 @@ class DedicatedUserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "Dedicated user '{$dedicatedUser->name}' deleted successfully.",
+            'message' => __('ppp.user_deleted', ['name' => $dedicatedUser->name]),
         ]);
     }
 
@@ -371,9 +384,11 @@ class DedicatedUserController extends Controller
                 'name' => $name,
             ]);
 
+            $password = ! empty($secret['password']) ? (string) $secret['password'] : ($record->password ?: '123456');
+            $record->password = $password;
+
             // Only update credentials and router settings, preserving custom customer fields if already existing
             if (! $record->exists) {
-                $record->password = $secret['password'] ?? '123456';
                 $record->customer_name = $secret['comment'] ?? $name;
                 $record->monthly_price = (float) ($pppProfile?->price ?? 0.0);
             } elseif ($record->monthly_price === null || (float) $record->monthly_price <= 0.0) {
@@ -395,12 +410,34 @@ class DedicatedUserController extends Controller
             $record->sync_failed_reason = null;
 
             $record->save();
+
+            // Synchronize customer login account into users table
+            User::updateOrCreate(
+                [
+                    'email' => "ppp_{$router->id}_{$name}@customer.tikpulse.local",
+                ],
+                [
+                    'name' => $name,
+                    'role' => 'customer',
+                    'password' => Hash::make($password),
+                    'is_active' => ! $record->disabled,
+                    'settings' => [
+                        'account_type' => 'ppp_customer',
+                        'router_id' => $router->id,
+                        'dedicated_user_id' => $record->id,
+                        'theme' => 'system',
+                        'accent_color' => 'sky',
+                        'preferred_locale' => 'id',
+                    ],
+                ]
+            );
+
             $synced[] = $record;
         }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Synced '.count($synced).' dedicated PPP users from RouterOS.',
+            'message' => __('ppp.users_synced', ['count' => count($synced)]),
             'data' => $synced,
         ]);
     }

@@ -58,7 +58,7 @@ class RouterController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Router registered successfully.',
+            'message' => __('routers.registered'),
             'data' => [
                 'router' => new RouterResource($router),
             ],
@@ -94,7 +94,7 @@ class RouterController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Router updated successfully.',
+            'message' => __('routers.updated'),
             'data' => [
                 'router' => new RouterResource($router),
             ],
@@ -120,7 +120,7 @@ class RouterController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Router deleted successfully.',
+            'message' => __('routers.deleted'),
         ]);
     }
 
@@ -157,7 +157,7 @@ class RouterController extends Controller
 
         return response()->json([
             'status' => $result['success'] ? 'success' : 'error',
-            'message' => $result['success'] ? 'Connection to MikroTik verified.' : 'Connection test failed.',
+            'message' => $result['success'] ? __('routers.verified') : __('routers.test_failed'),
             'data' => array_merge($result, [
                 'router' => new RouterResource($freshRouter),
             ]),
@@ -175,7 +175,7 @@ class RouterController extends Controller
             return response()->json([
                 'status' => 'offline',
                 'code' => 'ROUTER_OFFLINE',
-                'message' => $result['error'] ?? 'Router is offline. Polling paused to prevent timeouts.',
+                'message' => $result['error'] ?? __('routers.polling_paused'),
                 'data' => [
                     'router' => new RouterResource($router->fresh()),
                     'telemetry' => [],
@@ -241,7 +241,7 @@ class RouterController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Reboot command sent to MikroTik router.',
+            'message' => __('routers.reboot_sent'),
         ]);
     }
 }

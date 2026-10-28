@@ -46,10 +46,10 @@ class HandleInertiaRequests extends Middleware
         /** @var User|null $user */
         $user = $request->user();
 
-        // If not authenticated via session, check if Sanctum token cookie is present
-        if (! $user && $request->hasCookie('tikpulse_token')) {
+        // If not authenticated via session, check if Sanctum token cookie is present (except on login page)
+        if (! $user && ! $request->is('login') && $request->hasCookie('tikpulse_token')) {
             $tokenString = $request->cookie('tikpulse_token');
-            if (is_string($tokenString)) {
+            if (is_string($tokenString) && $tokenString !== '') {
                 $accessToken = PersonalAccessToken::findToken($tokenString);
                 if ($accessToken && $accessToken->tokenable instanceof User) {
                     $user = $accessToken->tokenable;

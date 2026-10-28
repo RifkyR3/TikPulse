@@ -29,6 +29,12 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
         config.headers['X-SafeMode-Bypass'] = bypassToken;
     }
 
+    // Inject Active Locale Context
+    const locale = localStorage.getItem('tikpulse_locale');
+    if (locale && config.headers && !config.headers['X-Locale']) {
+        config.headers['X-Locale'] = locale;
+    }
+
     return config;
 }, (error) => Promise.reject(error));
 

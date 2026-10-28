@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\Router;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class UserAndGroupManagementTest extends TestCase
@@ -411,5 +412,119 @@ class UserAndGroupManagementTest extends TestCase
         $response = $this->actingAs($this->superadmin)->get('/dashboard');
 
         $response->assertStatus(200);
+    }
+
+    public function test_user_management_operator_can_reset_password_with_auto_generated_password(): void
+    {
+        $targetUser = User::factory()->create([
+            'name' => 'Operator John',
+            'email' => 'john@tikpulse.test',
+            'password' => Hash::make('initial-pass-123'),
+        ]);
+
+        $token = $this->superadmin->createToken('admin_token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/v1/users/{$targetUser->id}/reset-password", []);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => 'success',
+            ]);
+
+        $tempPassword = $response->json('data.temporary_password');
+        $this->assertNotEmpty($tempPassword);
+        $this->assertEquals(12, strlen($tempPassword));
+
+        $targetUser->refresh();
+        $this->assertTrue(Hash::check($tempPassword, $targetUser->password));
+    }
+
+    public function test_user_management_operator_can_reset_password_with_custom_password(): void
+    {
+        $targetUser = User::factory()->create([
+            'name' => 'Operator Jane',
+            'email' => 'jane@tikpulse.test',
+            'password' => Hash::make('old-password'),
+        ]);
+
+        $token = $this->superadmin->createToken('admin_token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/v1/users/{$targetUser->id}/reset-password", [
+                'password' => 'new-secret-password-999',
+                'password_confirmation' => 'new-secret-password-999',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => 'success',
+                'data' => [
+                    'temporary_password' => 'new-secret-password-999',
+                ],
+            ]);
+
+        $targetUser->refresh();
+        $this->assertTrue(Hash::check('new-secret-password-999', $targetUser->password));
+    }
+
+    public function test_non_superadmin_cannot_reset_superadmin_password(): void
+    {
+        $normalGroup = Group::create([
+            'name' => 'Staff Support',
+            'slug' => 'support',
+            'is_superadmin' => false,
+            'all_routers' => true,
+        ]);
+
+        $normalGroup->permissions()->create([
+            'module_key' => 'users',
+            'can_read' => true,
+            'can_write' => false,
+            'can_update' => true,
+            'can_delete' => false,
+        ]);
+
+        $staffUser = User::factory()->create([
+            'name' => 'Staff Member',
+            'email' => 'staff@tikpulse.test',
+            'role' => 'operator',
+            'group_id' => $normalGroup->id,
+            'is_active' => true,
+        ]);
+
+        $token = $staffUser->createToken('staff_token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/v1/users/{$this->superadmin->id}/reset-password", []);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'status' => 'error',
+                'code' => 'SUPERADMIN_PASSWORD_PROTECTED',
+            ]);
+    }
+
+    public function test_user_resource_exposes_email_verification_status(): void
+    {
+        $verifiedUser = User::factory()->create([
+            'name' => 'Verified User',
+            'email' => 'verified@tikpulse.test',
+            'email_verified_at' => now(),
+        ]);
+
+        $token = $this->superadmin->createToken('token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/v1/users/{$verifiedUser->id}");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => 'success',
+                'data' => [
+                    'is_email_verified' => true,
+                ],
+            ]);
+        $this->assertNotNull($response->json('data.email_verified_at'));
     }
 }

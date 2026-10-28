@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\EmailVerificationController;
+use App\Http\Controllers\Api\Customer\CustomerStatusController;
 use App\Http\Controllers\Api\Hotspot\ActiveUserController;
 use App\Http\Controllers\Api\Hotspot\HotspotProfileController;
 use App\Http\Controllers\Api\Hotspot\HotspotUserController;
@@ -45,6 +47,24 @@ Route::prefix('v1')->group(function (): void {
             Route::post('reset-role', [AuthController::class, 'resetRole']);
         });
 
+        // Email Verification (Sanctum)
+        Route::prefix('email')->group(function (): void {
+            Route::post('verification-notification', [EmailVerificationController::class, 'resend'])
+                ->middleware('throttle:6,1');
+            Route::post('verify-code', [EmailVerificationController::class, 'verifyCode'])
+                ->middleware('throttle:10,1');
+        });
+
+        // ----------------------------------------------------------------------
+        // Customer Self-Service & Real-time Status Portal
+        // ----------------------------------------------------------------------
+        Route::prefix('customer')->group(function (): void {
+            Route::get('status', [CustomerStatusController::class, 'status']);
+            Route::put('profile', [CustomerStatusController::class, 'updateProfile']);
+            Route::post('disconnect', [CustomerStatusController::class, 'disconnect']);
+            Route::post('logout', [CustomerStatusController::class, 'logout']);
+        });
+
         // ----------------------------------------------------------------------
         // Module & RBAC Metadata
         // ----------------------------------------------------------------------
@@ -58,6 +78,8 @@ Route::prefix('v1')->group(function (): void {
 
         Route::apiResource('users', UserController::class)
             ->middleware('module.access:users,read');
+        Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])
+            ->middleware('module.access:users,update');
 
         // ----------------------------------------------------------------------
         // Multi-Router Management
@@ -112,6 +134,7 @@ Route::prefix('v1')->group(function (): void {
                 Route::post('vouchers/generate', [VoucherController::class, 'generate']);
                 Route::post('vouchers/mark-printed', [VoucherController::class, 'markPrinted']);
                 Route::post('hotspot/users', [HotspotUserController::class, 'store']);
+                Route::post('hotspot/users/sync', [HotspotUserController::class, 'sync']);
             });
 
             Route::middleware('module.access:hotspot_vouchers,update')->group(function (): void {

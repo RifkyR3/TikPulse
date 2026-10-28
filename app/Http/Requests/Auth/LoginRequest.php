@@ -18,15 +18,39 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation by normalizing the login identifier.
+     */
+    protected function prepareForValidation(): void
+    {
+        $identifier = trim((string) ($this->input('login') ?? $this->input('email') ?? $this->input('username') ?? ''));
+
+        $this->merge([
+            'login' => $identifier,
+            'email' => $identifier,
+            'username' => $identifier,
+        ]);
+    }
+
+    /**
      * @return array<string, array<int, string>>
      */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'login' => ['required', 'string'],
+            'email' => ['required', 'string'],
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
             'remember' => ['nullable', 'boolean'],
         ];
+    }
+
+    /**
+     * Get the login identifier (email or username).
+     */
+    public function getIdentifier(): string
+    {
+        return trim((string) ($this->input('login') ?? $this->input('email') ?? $this->input('username') ?? ''));
     }
 
     /**
@@ -73,6 +97,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower((string) $this->input('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->getIdentifier()).'|'.$this->ip());
     }
 }

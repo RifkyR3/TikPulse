@@ -9,7 +9,7 @@
     import { Input } from '@/components/ui/input';
     import { Label } from '@/components/ui/label';
     import { router } from '@inertiajs/svelte';
-    import { Activity, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, ShieldCheck } from '@lucide/svelte';
+    import { Activity, Mail, User as UserIcon, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight, ShieldCheck } from '@lucide/svelte';
 
     let email = $state('');
     let password = $state('');
@@ -29,12 +29,16 @@
 
     function validate(): boolean {
         clientError = null;
-        if (!email || !email.includes('@')) {
-            clientError = 'Please provide a valid administrative email address.';
+        if (!email || email.trim().length < 2) {
+            clientError = localeStore.locale === 'id'
+                ? 'Silakan masukkan email administrator atau username Hotspot / PPP.'
+                : 'Please provide an email address or Hotspot / PPP username.';
             return false;
         }
-        if (!password || password.length < 4) {
-            clientError = 'Password must be at least 4 characters long.';
+        if (!password) {
+            clientError = localeStore.locale === 'id'
+                ? 'Kata sandi tidak boleh kosong.'
+                : 'Password is required.';
             return false;
         }
         return true;
@@ -43,9 +47,13 @@
     async function handleLogin() {
         if (!validate()) return;
 
-        const success = await authStore.login(email, password, remember);
-        if (success) {
-            router.visit('/dashboard');
+        const res = await authStore.login(email.trim(), password, remember);
+        if (res.success) {
+            if (res.accountType === 'hotspot_customer' || res.accountType === 'ppp_customer' || authStore.user?.role === 'customer') {
+                router.visit('/status');
+            } else {
+                router.visit('/dashboard');
+            }
         }
     }
 
@@ -118,20 +126,20 @@
 
             <!-- Form -->
             <form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4">
-                <!-- Email Field -->
+                <!-- Email or Username Field -->
                 <div class="space-y-1.5">
-                    <Label for="login_email">{localeStore.t('auth.emailAddress')}</Label>
+                    <Label for="login_email">{localeStore.t('auth.emailOrUsername')}</Label>
                     <div class="relative">
                         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                            <Mail class="size-4" />
+                            <UserIcon class="size-4" />
                         </div>
                         <Input
                             id="login_email"
                             bind:value={email}
-                            type="email"
-                            autocomplete="email"
+                            type="text"
+                            autocomplete="username"
                             required
-                            placeholder={isProduction ? 'name@company.com' : 'admin@tikpulse.test'}
+                            placeholder={isProduction ? 'name@company.com / username' : 'admin@tikpulse.test / username'}
                             class="pl-9"
                         />
                     </div>

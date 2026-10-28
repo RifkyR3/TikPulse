@@ -13,6 +13,9 @@ services:
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
     volumes:
       - ./:/var/www/html
       - /var/www/html/vendor

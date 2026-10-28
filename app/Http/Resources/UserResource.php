@@ -35,6 +35,8 @@ class UserResource extends JsonResource
                 'all_routers' => (bool) $group->all_routers,
             ] : null,
             'is_active' => (bool) $this->is_active,
+            'is_email_verified' => $this->hasVerifiedEmail(),
+            'email_verified_at' => $this->email_verified_at?->toIso8601String(),
             'avatar_url' => $this->avatar_url,
             'preferred_locale' => $this->preferred_locale ?? 'en',
             'settings' => $this->settings ?? [

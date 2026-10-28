@@ -7,16 +7,30 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Infrastructure\Network\Mikrotik\Services\HotspotVoucherService;
+use App\Infrastructure\Network\Mikrotik\Services\PppService;
+use App\Models\DedicatedUser;
 use App\Models\Group;
+use App\Models\Router;
 use App\Models\User;
+use App\Models\Voucher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        protected ?PppService $pppService = null,
+        protected ?HotspotVoucherService $hotspotService = null,
+    ) {
+        $this->pppService ??= app(PppService::class);
+        $this->hotspotService ??= app(HotspotVoucherService::class);
+    }
+
     /**
      * Handle user authentication via Laravel Sanctum.
      */
@@ -24,13 +38,174 @@ class AuthController extends Controller
     {
         $request->ensureIsNotRateLimited();
 
-        $email = (string) $request->input('email');
+        $identifier = $request->getIdentifier();
         $password = (string) $request->input('password');
 
         /** @var User|null $user */
-        $user = User::with(['group', 'group.permissions', 'group.routers'])->where('email', $email)->first();
+        $user = null;
 
-        if (! $user || ! Hash::check($password, $user->password)) {
+        // 1. Try finding in users table by email or name
+        if (str_contains($identifier, '@')) {
+            $user = User::with(['group', 'group.permissions', 'group.routers'])->where('email', $identifier)->first();
+        } else {
+            $user = User::with(['group', 'group.permissions', 'group.routers'])
+                ->where('name', $identifier)
+                ->orWhere('email', $identifier)
+                ->first();
+        }
+
+        $accountType = 'admin';
+
+        if ($user) {
+            if (! Hash::check($password, $user->password)) {
+                $user = null;
+            } else {
+                $accountType = $user->role === 'customer'
+                    ? ($user->settings['account_type'] ?? 'customer')
+                    : 'admin';
+            }
+        }
+
+        // 2. If not found or password didn't match User, check Voucher (Hotspot customer)
+        if (! $user) {
+            $voucher = Voucher::where('username', $identifier)->first();
+            if ($voucher && ($voucher->password === $password || Hash::check($password, $voucher->password))) {
+                $user = User::updateOrCreate(
+                    [
+                        'email' => "hotspot_{$voucher->router_id}_{$voucher->username}@customer.tikpulse.local",
+                    ],
+                    [
+                        'name' => $voucher->username,
+                        'role' => 'customer',
+                        'password' => Hash::make($password),
+                        'is_active' => $voucher->status !== 'disabled',
+                        'settings' => [
+                            'account_type' => 'hotspot_customer',
+                            'router_id' => $voucher->router_id,
+                            'voucher_id' => $voucher->id,
+                            'theme' => 'system',
+                            'accent_color' => 'sky',
+                            'preferred_locale' => 'id',
+                        ],
+                    ]
+                );
+                $accountType = 'hotspot_customer';
+            }
+        }
+
+        // 3. If still not found, check DedicatedUser (PPP subscriber)
+        if (! $user) {
+            $dedicated = DedicatedUser::where('name', $identifier)->first();
+            if ($dedicated && ($dedicated->password === $password || Hash::check($password, $dedicated->password))) {
+                $user = User::updateOrCreate(
+                    [
+                        'email' => "ppp_{$dedicated->router_id}_{$dedicated->name}@customer.tikpulse.local",
+                    ],
+                    [
+                        'name' => $dedicated->name,
+                        'role' => 'customer',
+                        'password' => Hash::make($password),
+                        'is_active' => ! $dedicated->disabled,
+                        'settings' => [
+                            'account_type' => 'ppp_customer',
+                            'router_id' => $dedicated->router_id,
+                            'dedicated_user_id' => $dedicated->id,
+                            'theme' => 'system',
+                            'accent_color' => 'sky',
+                            'preferred_locale' => 'id',
+                        ],
+                    ]
+                );
+                $accountType = 'ppp_customer';
+            }
+        }
+
+        // 4. Live Router Query Fallback (for unsynced PPP secrets or Hotspot users directly on MikroTik)
+        if (! $user && ! str_contains($identifier, '@')) {
+            $routers = Router::where('status', 'online')->orWhere('id', 2)->get();
+            if ($routers->isEmpty()) {
+                $routers = Router::all();
+            }
+
+            foreach ($routers as $router) {
+                try {
+                    $secrets = $this->pppService->getSecrets($router, true);
+                    $sec = collect($secrets)->firstWhere('name', $identifier);
+                    if ($sec && (string) ($sec['password'] ?? '') === $password) {
+                        $dedicated = DedicatedUser::updateOrCreate(
+                            ['router_id' => $router->id, 'name' => $identifier],
+                            [
+                                'password' => $password,
+                                'service' => $sec['service'] ?? 'pppoe',
+                                'profile' => $sec['profile'] ?? 'default',
+                                'disabled' => $sec['disabled'] ?? false,
+                                'synced_to_router' => true,
+                                'comment' => $sec['comment'] ?? null,
+                            ]
+                        );
+
+                        $user = User::updateOrCreate(
+                            ['email' => "ppp_{$router->id}_{$identifier}@customer.tikpulse.local"],
+                            [
+                                'name' => $identifier,
+                                'role' => 'customer',
+                                'password' => Hash::make($password),
+                                'is_active' => ! ($sec['disabled'] ?? false),
+                                'settings' => [
+                                    'account_type' => 'ppp_customer',
+                                    'router_id' => $router->id,
+                                    'dedicated_user_id' => $dedicated->id,
+                                    'theme' => 'system',
+                                    'accent_color' => 'sky',
+                                    'preferred_locale' => 'id',
+                                ],
+                            ]
+                        );
+                        $accountType = 'ppp_customer';
+                        break;
+                    }
+
+                    $hsUsers = $this->hotspotService->getHotspotUsers($router, true);
+                    $hs = collect($hsUsers)->firstWhere('name', $identifier);
+                    if ($hs && (string) ($hs['password'] ?? '') === $password) {
+                        $voucher = Voucher::updateOrCreate(
+                            ['router_id' => $router->id, 'username' => $identifier],
+                            [
+                                'code' => $identifier,
+                                'password' => $password,
+                                'status' => ($hs['disabled'] ?? false) ? 'disabled' : 'active',
+                                'synced_to_router' => true,
+                                'comment' => $hs['comment'] ?? null,
+                            ]
+                        );
+
+                        $user = User::updateOrCreate(
+                            ['email' => "hotspot_{$router->id}_{$identifier}@customer.tikpulse.local"],
+                            [
+                                'name' => $identifier,
+                                'role' => 'customer',
+                                'password' => Hash::make($password),
+                                'is_active' => ! ($hs['disabled'] ?? false),
+                                'settings' => [
+                                    'account_type' => 'hotspot_customer',
+                                    'router_id' => $router->id,
+                                    'voucher_id' => $voucher->id,
+                                    'theme' => 'system',
+                                    'accent_color' => 'sky',
+                                    'preferred_locale' => 'id',
+                                ],
+                            ]
+                        );
+                        $accountType = 'hotspot_customer';
+                        break;
+                    }
+                } catch (\Throwable) {
+                    // Non-fatal router connection error during credentials check
+                }
+            }
+        }
+
+        if (! $user) {
             $request->hitRateLimiter();
 
             throw ValidationException::withMessages([
@@ -44,7 +219,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'error',
                 'code' => 'ACCOUNT_DEACTIVATED',
-                'message' => 'Your account has been deactivated. Please contact the administrator.',
+                'message' => __('auth.account_deactivated'),
             ], 403);
         }
 
@@ -62,9 +237,10 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Authentication successful.',
+            'message' => __('auth.login_success'),
             'data' => [
                 'user' => new UserResource($user),
+                'account_type' => $accountType,
                 'token' => $token,
                 'token_type' => 'Bearer',
                 'remember' => $remember,
@@ -88,20 +264,30 @@ class AuthController extends Controller
         /** @var User|null $user */
         $user = $request->user();
 
-        if ($user) {
-            $user->currentAccessToken()?->delete();
+        $tokenString = $request->bearerToken() ?? $request->cookie('tikpulse_token');
+        if (is_string($tokenString) && $tokenString !== '') {
+            PersonalAccessToken::findToken($tokenString)?->delete();
         }
 
+        if ($user) {
+            $user->currentAccessToken()?->delete();
+            if ($user->role === 'customer') {
+                $user->tokens()->where('name', 'tikpulse_auth_token')->delete();
+            }
+        }
+
+        Auth::guard('web')->logout();
+
         if ($request->hasSession()) {
-            Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
         }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Successfully logged out.',
-        ])->withoutCookie('tikpulse_token');
+            'message' => __('auth.token_revoked'),
+        ])->withCookie(cookie()->forget('tikpulse_token', '/'))
+            ->withCookie(cookie()->forget('tikpulse_session', '/'));
     }
 
     /**
@@ -142,7 +328,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Language preference updated.',
+            'message' => __('auth.locale_updated'),
             'data' => [
                 'preferred_locale' => $user->preferred_locale,
                 'settings' => $user->settings,
@@ -194,7 +380,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Settings saved successfully.',
+            'message' => __('auth.preferences_updated'),
             'data' => [
                 'user' => new UserResource($user),
             ],
@@ -213,7 +399,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'error',
                 'code' => 'SUPERADMIN_ONLY',
-                'message' => 'Only Super Administrators can switch roles.',
+                'message' => __('users.reset_admin_forbidden'),
             ], 403);
         }
 
@@ -227,8 +413,8 @@ class AuthController extends Controller
         $user->load(['group', 'group.permissions', 'group.routers']);
 
         $message = $user->simulated_group_id
-            ? 'Switched role simulation to group.'
-            : 'Reset role to default Super Administrator.';
+            ? __('auth.switched_role', ['group' => $user->group?->name ?? 'group'])
+            : __('auth.reverted_role');
 
         return response()->json([
             'status' => 'success',
@@ -251,7 +437,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'error',
                 'code' => 'SUPERADMIN_ONLY',
-                'message' => 'Only Super Administrators can switch roles.',
+                'message' => __('users.reset_admin_forbidden'),
             ], 403);
         }
 
@@ -261,7 +447,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Simulation cleared. Reverted to Super Administrator.',
+            'message' => __('auth.reverted_role'),
             'data' => [
                 'user' => new UserResource($user),
             ],

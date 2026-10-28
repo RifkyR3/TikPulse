@@ -229,6 +229,7 @@ class PppService
             $secrets[] = [
                 'id' => $item['.id'] ?? '',
                 'name' => (string) $item['name'],
+                'password' => (string) ($item['password'] ?? ''),
                 'service' => (string) ($item['service'] ?? 'any'),
                 'profile' => (string) ($item['profile'] ?? 'default'),
                 'local_address' => $item['local-address'] ?? null,
@@ -296,7 +297,34 @@ class PppService
     }
 
     /**
+     * Disconnect/kick all active PPP connections for a specific username.
+     */
+    public function disconnectActiveUser(Router $router, string $username): int
+    {
+        $driver = $this->connectionService->getDriver($router);
+        $activeList = $driver->command('/ppp/active/print', [
+            '?name='.$username,
+        ]);
+
+        $kicked = 0;
+        foreach ($activeList as $active) {
+            if (isset($active['.id'])) {
+                try {
+                    $driver->command('/ppp/active/remove', ['=.id='.$active['.id']]);
+                    $kicked++;
+                } catch (\Throwable) {
+                }
+            }
+        }
+
+        Cache::forget("ros_ppp_active_{$router->id}");
+
+        return $kicked;
+    }
+
+    /**
      * Update an existing PPP secret on MikroTik.
+     * If the secret does not exist on the router, it will automatically be created.
      *
      * @param  array{password?: string, service?: string, profile?: string, local_address?: string|null, remote_address?: string|null, caller_id?: string|null, routes?: string|null, comment?: string|null, disabled?: bool|null}  $data
      * @return array<int, array<string, string>>
@@ -310,7 +338,23 @@ class PppService
         ]);
 
         if (empty($find) || ! isset($find[0]['.id'])) {
-            throw new Exception("PPP secret '{$username}' not found on router.");
+            $created = $this->addSecret($router, [
+                'name' => $username,
+                'password' => $data['password'] ?? '',
+                'service' => $data['service'] ?? 'pppoe',
+                'profile' => $data['profile'] ?? 'default',
+                'local_address' => $data['local_address'] ?? null,
+                'remote_address' => $data['remote_address'] ?? null,
+                'caller_id' => $data['caller_id'] ?? null,
+                'routes' => $data['routes'] ?? null,
+                'comment' => $data['comment'] ?? null,
+                'disabled' => $data['disabled'] ?? false,
+            ]);
+
+            $this->disconnectActiveUser($router, $username);
+            Cache::forget("ros_ppp_secrets_{$router->id}");
+
+            return $created;
         }
 
         $id = $find[0]['.id'];
@@ -353,6 +397,7 @@ class PppService
         }
 
         $res = $driver->command('/ppp/secret/set', $params);
+        $this->disconnectActiveUser($router, $username);
         Cache::forget("ros_ppp_secrets_{$router->id}");
 
         return $res;
