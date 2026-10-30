@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
-    import ApexCharts from 'apexcharts';
+    import type ApexCharts from 'apexcharts';
     import 'apexcharts/dist/apexcharts.css';
     import { routerContextStore } from '@/stores/routerContext.svelte';
     import { localeStore } from '@/stores/locale.svelte';
@@ -112,12 +112,19 @@
         return bps + ' bps';
     }
 
-    function initChart() {
+    let ApexChartsConstructor: any = null;
+
+    async function initChart() {
         if (!chartContainerRef) return;
 
         if (chartInstance) {
             chartInstance.destroy();
             chartInstance = null;
+        }
+
+        if (!ApexChartsConstructor) {
+            const mod = await import('apexcharts');
+            ApexChartsConstructor = mod.default || mod;
         }
 
         const isDark = themeStore.isDark;
@@ -235,7 +242,7 @@
             },
         };
 
-        chartInstance = new ApexCharts(chartContainerRef, options);
+        chartInstance = new ApexChartsConstructor(chartContainerRef, options);
         chartInstance.render();
     }
 

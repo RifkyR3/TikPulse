@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - Unreleased
 
+### Changed
+- **Node.js 26 Runtime & Dependency Upgrade**:
+  - Upgraded frontend runtime to Node.js 26 across `package.json` (`engines.node: "^26.0"`), `@types/node` (`^26.6.6`), `Dockerfile` (`node:26-alpine`), and `docker-compose.override.yml` (`node:26-slim`).
+  - Added global Corepack bootstrapping (`npm install -g corepack@latest && corepack enable`) in Docker environments to support Node 26 unbundled Corepack behavior.
+- **Frontend Bundle Optimization & Code-Splitting**:
+  - Implemented client-side dynamic import for `apexcharts` in `InterfaceTrafficChart.svelte`, shrinking `Dashboard.js` from 958.92 kB down to 31.97 kB.
+  - Configured Vite build options (`build.chunkSizeWarningLimit: 1024` and `rollupOptions.output.manualChunks` isolating `vendor-apexcharts`) in `vite.config.ts`, eliminating the `[plugin builtin:vite-reporter]` chunk size warning.
+
 ### Added
+- **Redis Commander Development Dashboard**:
+  - Docker service `redis-commander` (`rediscommander/redis-commander:latest`) integrated into `docker-compose.yml` under `profiles: [dev]` mapping port `8081:8081`, providing interactive visual inspection for Redis keys, cache, and job queues.
+  - Environment port configuration variable `REDIS_COMMANDER_PORT=8081` registered in `.env`, `.env.example`, and `.env.docker.example`.
+  - Updated documentation in `README.md` with links and ports for Redis Commander.
 - **6-Digit Email Verification Code System**:
   - `VerifyEmailCodeNotification` dispatching both a high-visibility 6-digit verification code (15-minute TTL via Cache) and standard signed verification URL in English and Indonesian.
   - Endpoints `POST /api/v1/email/verification-notification` and `POST /api/v1/email/verify-code` (Sanctum) along with web route `POST /email/verify-code` (Inertia session).
@@ -39,13 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mailpit Email Testing Server for Local Development**:
   - Docker service `mailpit` integrated in `docker-compose.yml` (`axllent/mailpit:latest`) with SMTP on port `1025` and Web UI dashboard on port `8025`, strictly scoped to development profile (`profiles: [dev]`).
   - Default SMTP configuration set in `.env` and `.env.example` targeting `127.0.0.1:1025`.
-- **Apache Kafka Distributed Event Streaming & Telemetry Ingestion**:
-  - Docker service `kafka` integrated in `docker-compose.yml` (`apache/kafka:latest`) in KRaft single-node mode with dual listeners: internal container bridge on `kafka:29092` and host machine binding on port `9092` (`PLAINTEXT_HOST://localhost:9092`).
-  - Pure PHP socket-based Kafka service (`KafkaService`) implementing lightweight binary ProduceRequest v0 protocol with zero external C-extension dependencies.
-  - Automatic live telemetry streaming from `MikrotikConnectionService::testAndSyncTelemetry` to Kafka topic `tikpulse.telemetry`.
-  - Automatic Safe Mode audit logging dispatched to Kafka topic `tikpulse.safemode.audit` via `SafeModeAuditLog` model lifecycle observer.
-  - Artisan publishing command (`php artisan kafka:publish {topic} {message}`) and dedicated `config/kafka.php`.
-  - Environment variables `KAFKA_ENABLED`, `KAFKA_BROKERS`, `KAFKA_CLIENT_ID`, and topics registered across `.env`, `.env.example`, and `.env.docker.example`.
 - **Email Verification & Account Security**:
   - Fortify email verification enabled (`MustVerifyEmail` and `Features::emailVerification()`).
   - Svelte 5 authentication views: `verify-email.svelte`, `forgot-password.svelte`, and `reset-password.svelte`.

@@ -116,6 +116,9 @@ docker compose --profile dev up -d
   * **WinBox Desktop Access**: Connect to `127.0.0.1:8291` (`admin` / `admin123`)
   * **WebFig Browser GUI**: [http://localhost:8080](http://localhost:8080)
   * **MikroTik Socket API**: Port `8728`
+  * **Mailpit Web Dashboard**: [http://localhost:8025](http://localhost:8025)
+  * **Redis Commander**: [http://localhost:8081](http://localhost:8081)
+  * **Redis Server**: Port `6379`
 
 To re-run the dummy MikroTik provisioner at any time:
 ```bash

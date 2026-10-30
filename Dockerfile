@@ -1,10 +1,10 @@
 # ==============================================================================
 # Stage 1: Build Frontend Assets (Svelte 5 + Inertia.js v3 + Vite + Tailwind CSS v4)
 # ==============================================================================
-FROM node:24-alpine AS frontend-builder
+FROM node:26-alpine AS frontend-builder
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@^10.12 --activate
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@^10.12 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
 RUN pnpm install --frozen-lockfile

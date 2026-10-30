@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Infrastructure\Kafka\KafkaService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,19 +26,6 @@ class SafeModeAuditLog extends Model
     use HasFactory;
 
     public $timestamps = false;
-
-    protected static function booted(): void
-    {
-        static::created(function (self $log): void {
-            if (app()->bound(KafkaService::class)) {
-                app(KafkaService::class)->publishAudit(
-                    $log->command_type,
-                    $log->router_id,
-                    $log->toArray()
-                );
-            }
-        });
-    }
 
     protected $fillable = [
         'router_id',
